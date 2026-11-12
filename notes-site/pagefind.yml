@@ -1,0 +1,6 @@
+# Pagefind builds the search index after `zensical build` (see build.sh); javascripts/search.js shows it.
+site: site
+root_selector: "article.md-content__inner"   # index each note's text only, not menus or sidebars
+exclude_selectors:
+  - ".headerlink"       # the ¶ after headings
+  - ".study-meta"       # reading time and buttons (added by study.js, so not in the built page anyway)

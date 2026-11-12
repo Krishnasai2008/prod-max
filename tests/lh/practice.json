@@ -1,0 +1,234 @@
+{
+ "id": "chat_practice",
+ "title": "Paging drills",
+ "kind": "practice",
+ "createdAt": "2026-11-09T13:00:00Z",
+ "updatedAt": "2026-11-09T13:20:00Z",
+ "messages": [
+  {
+   "id": "p1",
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "let's practise paging"
+    }
+   ],
+   "timestamp": 1794229200000
+  },
+  {
+   "id": "p2",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_pr1",
+     "name": "problem",
+     "arguments": {
+      "statement": "Problem 1: count the LRU faults.",
+      "modelSolution": "Solution 1.",
+      "mode": "recall",
+      "targets": [
+       "n1"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794229210000
+  },
+  {
+   "id": "p3",
+   "role": "custom",
+   "customType": "practice-thinking",
+   "details": {
+    "text": "LRU evicts...",
+    "problemCallId": "call_pr1"
+   },
+   "timestamp": 1794229240000
+  },
+  {
+   "id": "p4",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_c1",
+     "name": "conclude",
+     "arguments": {
+      "outcome": "solved"
+     }
+    }
+   ],
+   "timestamp": 1794229260000
+  },
+  {
+   "id": "p5",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_pr2",
+     "name": "problem",
+     "arguments": {
+      "statement": "Problem 2: count the LRU faults.",
+      "modelSolution": "Solution 2.",
+      "mode": "recall",
+      "targets": [
+       "n1"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794229270000
+  },
+  {
+   "id": "p6",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_c2",
+     "name": "conclude",
+     "arguments": {
+      "outcome": "solvedWithHints"
+     }
+    }
+   ],
+   "timestamp": 1794229320000
+  },
+  {
+   "id": "p7",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_pr3",
+     "name": "problem",
+     "arguments": {
+      "statement": "Problem 3: count the LRU faults.",
+      "modelSolution": "Solution 3.",
+      "mode": "recall",
+      "targets": [
+       "n1"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794229330000
+  },
+  {
+   "id": "p8",
+   "role": "custom",
+   "customType": "problem-dismissed",
+   "details": {},
+   "timestamp": 1794229340000
+  },
+  {
+   "id": "p9",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_pr4",
+     "name": "problem",
+     "arguments": {
+      "statement": "Problem 4: count the LRU faults.",
+      "modelSolution": "Solution 4.",
+      "mode": "recall",
+      "targets": [
+       "n1"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794229350000
+  },
+  {
+   "id": "p10",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_c4",
+     "name": "conclude",
+     "arguments": {
+      "outcome": "movedOn"
+     }
+    }
+   ],
+   "timestamp": 1794229400000
+  },
+  {
+   "id": "p11",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_pr5",
+     "name": "problem",
+     "arguments": {
+      "statement": "Problem 5: count the LRU faults.",
+      "modelSolution": "Solution 5.",
+      "mode": "recall",
+      "targets": [
+       "n1"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794229410000
+  },
+  {
+   "id": "p12",
+   "role": "custom",
+   "customType": "practice-thinking",
+   "details": {
+    "text": "hmm",
+    "problemCallId": "call_pr5"
+   },
+   "timestamp": 1794229430000
+  },
+  {
+   "id": "p13",
+   "role": "custom",
+   "customType": "practice-thinking",
+   "details": {
+    "text": "still thinking",
+    "problemCallId": "call_pr5"
+   },
+   "timestamp": 1794229450000
+  }
+ ]
+}

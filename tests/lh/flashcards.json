@@ -1,0 +1,68 @@
+{
+ "version": 1,
+ "propositions": {
+  "p_review": {
+   "id": "p_review",
+   "name": "A TLB caches page-table entries",
+   "schedule": {
+    "state": 2,
+    "stability": 10,
+    "difficulty": 5,
+    "last_review": 1793376000000,
+    "due": 1794153600000
+   }
+  },
+  "p_new": {
+   "id": "p_new",
+   "name": "The dirty bit marks a written page",
+   "schedule": {
+    "state": 0,
+    "stability": 0,
+    "difficulty": 0,
+    "last_review": null,
+    "due": 1794153600000
+   }
+  },
+  "p_learn": {
+   "id": "p_learn",
+   "name": "LRU is a stack algorithm",
+   "schedule": {
+    "state": 1,
+    "stability": 2,
+    "difficulty": 6,
+    "last_review": 1793980800000,
+    "due": 1794326400000
+   }
+  },
+  "p_hand": {
+   "id": "p_hand",
+   "name": "Belady's anomaly hits FIFO",
+   "schedule": {
+    "state": 2,
+    "stability": 5,
+    "difficulty": 5,
+    "last_review": 1794067200000,
+    "due": 1794499200000
+   }
+  }
+ },
+ "decks": [
+  {
+   "id": "d1",
+   "name": "TLB and paging",
+   "sourceId": "chat_teach",
+   "propositionIds": [
+    "p_review",
+    "p_new",
+    "p_learn"
+   ]
+  },
+  {
+   "id": "d2",
+   "name": "my cards",
+   "propositionIds": [
+    "p_hand"
+   ]
+  }
+ ]
+}

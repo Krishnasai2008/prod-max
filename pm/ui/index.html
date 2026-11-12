@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>pm</title>
+  <link rel="stylesheet" href="/ui/app.css">
+  <link rel="stylesheet" href="/ui/files.css">
+  <link rel="stylesheet" href="/ui/bugs.css">
+  <link rel="stylesheet" href="/ui/stats.css">
+  <link rel="stylesheet" href="/ui/risk.css">
+</head>
+<body>
+  <header>
+    <a class="brand" href="#/today">pm</a>
+    <nav id="nav" aria-label="screens">
+      <a href="#/today" data-route="today">Today</a>
+      <a href="#/tasks" data-route="tasks">Tasks</a>
+      <a href="#/review" data-route="review">Review</a>
+      <a href="#/study" data-route="study">Study</a>
+      <a href="#/risk" data-route="risk">Risk</a>
+      <a href="#/stats" data-route="stats">Stats</a>
+      <a href="#/bugs" data-route="bugs">Bugs</a>
+      <a href="#/files" data-route="files">Files</a>
+      <a href="#/settings" data-route="settings">Settings</a>
+      <a href="#/exam" data-route="exam">Exam</a>
+      <a href="#/practice" data-route="practice">Practice</a>
+    </nav>
+    <div class="badges">
+      <span id="crunch" class="badge" hidden></span>
+      <span id="reviews" class="badge" hidden></span>
+    </div>
+    <div id="timer-chip" class="chip" hidden></div>
+  </header>
+  <div id="banner" class="banner" role="alert" hidden></div>
+  <main id="screen"></main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="help" aria-labelledby="help-title">
+    <h2 id="help-title">keyboard</h2>
+    <dl class="keys">
+      <dt><kbd>1</kbd></dt><dd>today</dd>
+      <dt><kbd>2</kbd></dt><dd>tasks</dd>
+      <dt><kbd>3</kbd></dt><dd>review</dd>
+      <dt><kbd>4</kbd></dt><dd>study</dd>
+      <dt><kbd>5</kbd></dt><dd>risk</dd>
+      <dt><kbd>6</kbd></dt><dd>stats</dd>
+      <dt><kbd>7</kbd></dt><dd>bugs</dd>
+      <dt><kbd>8</kbd></dt><dd>files</dd>
+      <dt><kbd>9</kbd></dt><dd>settings</dd>
+      <dt><kbd>0</kbd></dt><dd>exam</dd>
+      <dt><kbd>p</kbd></dt><dd>practice</dd>
+      <dt><kbd>n</kbd></dt><dd>new task</dd>
+      <dt><kbd>s</kbd></dt><dd>start, or the pause note while running</dd>
+      <dt><kbd>?</kbd></dt><dd>this help</dd>
+      <dt><kbd>Esc</kbd></dt><dd>close</dd>
+    </dl>
+    <form method="dialog">
+      <button class="btn" type="submit">close</button>
+    </form>
+  </dialog>
+  <dialog id="addstudy" aria-labelledby="addstudy-title"></dialog>
+  <noscript><p class="muted">pm ui needs JavaScript.</p></noscript>
+  <script type="module" src="/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prod-max"
+version = "0.17.0"
+description = "Local planner that learns your estimate bias and simulates deadline risk"
+requires-python = ">=3.12"
+dependencies = ["fsrs>=6.3,<7"]
+
+[project.scripts]
+pm = "pm.cli:main"
+
+[tool.setuptools]
+packages = ["pm", "pm.generators"]
+
+[tool.setuptools.package-data]
+pm = ["ui/*", "lh_plugin/dist/*"]

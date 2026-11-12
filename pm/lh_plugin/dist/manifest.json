@@ -1,0 +1,9 @@
+{
+  "apiVersion": 1,
+  "id": "pm-bridge",
+  "name": "pm planner bridge",
+  "version": "1.0.0",
+  "minAppVersion": "0.6.0",
+  "description": "Gives the tutor your planner's context, your notes, past-paper questions and verified problems. Needs pm ui running on this machine.",
+  "backend": "backend.cjs"
+}

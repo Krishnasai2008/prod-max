@@ -1,0 +1,95 @@
+site_name: My Notes
+site_description: Personal study notes
+# Needed for instant (no-reload) page switching. Replace with your real address:
+site_url: https://your-site.pages.dev/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"   # follow the device's light/dark setting
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/brightness-7, name: Switch to dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/brightness-4, name: Switch to light mode }
+  features:
+    # - navigation.tabs        # only if you regroup into ~8 or fewer top-level folders
+    - navigation.prune         # keeps 900+ pages fast: each page only ships its part of the sidebar
+    - navigation.indexes       # a folder's index.md becomes the section's page
+    - navigation.instant       # fast page switching, no full reloads (needs site_url)
+    - navigation.instant.prefetch  # start loading a page when you hover its link
+    - navigation.instant.progress  # thin progress bar on slow loads
+    - navigation.path          # breadcrumbs above the page title
+    - navigation.tracking
+    - navigation.top           # "back to top" button
+    - navigation.footer        # prev / next links
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link        # switching a tab switches same-named tabs everywhere
+    - content.tooltips         # styled tooltips instead of browser ones
+
+# No `nav:` key on purpose — the sidebar is built from your folder structure.
+# Optional per-folder ordering/titles via .nav.yml files (see awesome-nav below).
+
+plugins:
+  # Built-in search off: its index (all the notes' text, 28 MB) took 6+ s to load on every page.
+  # Pagefind indexes the built site instead (build.sh, pagefind.yml, javascripts/search.js).
+  - search:
+      enabled: false
+  - awesome-nav    # built into Zensical; reads optional .nav.yml in any folder
+  - tags           # optional: add `tags: [...]` to a note's front matter
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - attr_list
+  - md_in_html
+  - footnotes
+  - tables
+  - def_list
+  - pymdownx.details           # ??? collapsible blocks (hide answers)
+  - pymdownx.superfences:
+      custom_fences:  # ```mermaid blocks become diagrams
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.mark
+  - pymdownx.keys              # ++ctrl+k++ keyboard keys
+  - pymdownx.emoji:            # :material-folder: icons and emoji
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.arithmatex:       # LaTeX math: $...$ and $$...$$
+      generic: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js   # loads MathJax itself, only on pages with math
+  - javascripts/search.js    # search box (Pagefind), / or Ctrl+K
+  - javascripts/backup.js    # online copy of your progress, restored if the browser's is wiped (before study.js)
+  - javascripts/study.js     # mark as done, progress, continue reading, focus mode
+  - javascripts/today.js     # to-do list, study clock and stats (needs study.js first)
+  - javascripts/pmstats.js   # stats page from pm stats --push (needs today.js first)
+  - javascripts/pmhome.js    # planner box on the home page, from pm stats --push (needs pmstats.js first)

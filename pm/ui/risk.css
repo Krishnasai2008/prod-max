@@ -1,0 +1,98 @@
+.risk-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.risk-control {
+  display: grid;
+  gap: 2px;
+}
+
+.risk-control label {
+  margin: 0;
+}
+
+.risk-slider {
+  flex-wrap: nowrap;
+}
+
+.risk-slider input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.risk-slider output {
+  flex: 0 0 auto;
+  color: var(--c-text);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.risk-chart {
+  overflow-x: auto;
+  margin: 10px 0 12px;
+  padding-bottom: 4px;
+}
+
+.risk-chart svg {
+  display: block;
+  max-width: none;
+}
+
+.risk-chart .tick {
+  stroke: var(--c-border);
+}
+
+.risk-chart .tick-label {
+  fill: var(--c-muted);
+  font-size: 11px;
+}
+
+.risk-chart .today {
+  stroke: var(--c-accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.risk-chart .risk-label {
+  fill: var(--c-text);
+  font-size: 12px;
+}
+
+.risk-chart .risk-due {
+  stroke: var(--c-text);
+  stroke-width: 2;
+}
+
+.risk-chart .risk-startby {
+  fill: var(--c-muted);
+  stroke: none;
+}
+
+.risk-chart rect[data-level="green"] {
+  fill: color-mix(in srgb, var(--c-lv-green) 25%, var(--c-surface));
+  stroke: var(--c-lv-green);
+}
+
+.risk-chart rect[data-level="orange"] {
+  fill: color-mix(in srgb, var(--c-lv-orange) 25%, var(--c-surface));
+  stroke: var(--c-lv-orange);
+}
+
+.risk-chart rect[data-level="red"] {
+  fill: color-mix(in srgb, var(--c-lv-red) 25%, var(--c-surface));
+  stroke: var(--c-lv-red);
+}
+
+.risk-table {
+  overflow-x: auto;
+}
+
+.risk-crunch {
+  margin-top: 0;
+}
+
+.risk-actions {
+  margin-top: 12px;
+}

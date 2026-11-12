@@ -1,0 +1,12 @@
+site/
+.venv/
+.cache/
+__pycache__/
+.preview.tgz
+# never publish these
+.env
+.env.*
+.dev.vars
+.netrc
+*.pem
+.wrangler/

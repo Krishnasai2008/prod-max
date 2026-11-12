@@ -1,0 +1,13 @@
+.pool/
+__pycache__/
+*.egg-info/
+.venv/
+# ai-pool and agent files: local to this machine, never published
+AGENTS.md
+CLAUDE.md
+pool.toml
+opencode.json
+.mcp.json
+.agents/
+.claude/
+.superpowers/

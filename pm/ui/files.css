@@ -1,0 +1,49 @@
+.files-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.files-controls input[type="search"] {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.files-controls select {
+  flex: 0 1 12rem;
+  width: auto;
+}
+
+.file {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.file:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.file-name {
+  overflow-wrap: anywhere;
+}
+
+.file-path {
+  margin: 2px 0 6px;
+  font-family: var(--f-mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.file-snippet {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--c-border);
+  color: var(--c-text);
+}

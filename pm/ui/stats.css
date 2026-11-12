@@ -1,0 +1,158 @@
+[data-level="some"] {
+  --lv: color-mix(in srgb, var(--c-lv-green) 35%, var(--c-bg));
+}
+
+[data-level="green"] {
+  --lv: var(--c-lv-green);
+}
+
+[data-level="orange"] {
+  --lv: var(--c-lv-orange);
+}
+
+[data-level="red"] {
+  --lv: var(--c-lv-red);
+}
+
+.study-hint {
+  margin: 0.4rem 0 0.8rem;
+  font-size: 0.65rem;
+  color: var(--c-muted);
+}
+
+.study-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin: 0.6rem 0 1rem;
+}
+
+.study-tiles > div {
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: var(--c-bg);
+}
+
+.study-tiles small {
+  display: block;
+  color: var(--c-muted);
+  font-size: 0.62rem;
+}
+
+.study-tiles b {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-tiles b[data-level="green"],
+.study-tiles b[data-level="orange"],
+.study-tiles b[data-level="red"] {
+  color: var(--lv);
+}
+
+.study-heat-wrap {
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.study-heat {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: 1em repeat(7, 11px);
+  grid-template-columns: 2em;
+  grid-auto-columns: 11px;
+  gap: 3px;
+  width: max-content;
+  font-size: 0.55rem;
+  line-height: 11px;
+  color: var(--c-muted);
+}
+
+.study-heat span {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.study-heat i,
+.study-legend i {
+  display: block;
+  border-radius: 2px;
+  background: var(--lv, var(--c-border));
+}
+
+.study-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  margin: 0.4rem 0 1rem;
+  font-size: 0.6rem;
+  color: var(--c-muted);
+}
+
+.study-legend i {
+  width: 11px;
+  height: 11px;
+  margin-left: 0.6em;
+}
+
+.study-label {
+  margin: 1rem 0 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.study-row {
+  display: grid;
+  grid-template-columns: 9em 1fr 4.5em;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.68rem;
+}
+
+.study-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-row b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-row .study-bar {
+  margin: 0.25em 0;
+}
+
+.study-pm .study-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.study-pm h2 small {
+  font-size: 0.6em;
+  color: var(--c-muted);
+  font-weight: 400;
+}
+
+.study-pm table {
+  font-size: 0.7rem;
+}
+
+.study-spark {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: 40px;
+  margin: 0.4rem 0;
+}
+
+.study-spark polyline {
+  fill: none;
+  stroke: var(--c-accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}

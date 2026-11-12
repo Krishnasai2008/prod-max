@@ -1,0 +1,443 @@
+{
+ "id": "chat_teach",
+ "title": "TLB and paging",
+ "kind": "teach",
+ "version": 1,
+ "createdAt": "2026-11-09T12:00:00Z",
+ "updatedAt": "2026-11-09T12:30:00Z",
+ "messages": [
+  {
+   "id": "m1",
+   "role": "user",
+   "content": "[pm:topic=1] teach me paging",
+   "timestamp": 1794225600000
+  },
+  {
+   "id": "m2",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_p1",
+     "name": "probe",
+     "arguments": {
+      "question": "What does a page table map?",
+      "options": [
+       "virtual pages to frames",
+       "files to blocks"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794225660000
+  },
+  {
+   "id": "m3",
+   "role": "toolResult",
+   "toolCallId": "call_p1",
+   "toolName": "probe",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "tool": "probe",
+    "questionText": "What does a page table map?",
+    "options": [
+     {
+      "label": "virtual pages to frames",
+      "value": "a"
+     },
+     {
+      "label": "files to blocks",
+      "value": "b"
+     }
+    ],
+    "answers": [
+     {
+      "label": "virtual pages to frames",
+      "value": "a",
+      "index": 1
+     }
+    ],
+    "correct": true,
+    "correctIndices": [
+     1
+    ],
+    "confidence": 70,
+    "answeredAt": "2026-11-09T12:01:30Z"
+   },
+   "timestamp": 1794225720000
+  },
+  {
+   "id": "m4",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_q1",
+     "name": "quiz",
+     "arguments": {
+      "question": "Will FIFO fault more with 4 frames on Belady's string?",
+      "questionType": "predict"
+     }
+    }
+   ],
+   "timestamp": 1794225780000
+  },
+  {
+   "id": "m5",
+   "role": "toolResult",
+   "toolCallId": "call_q1",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "tool": "quiz",
+    "questionType": "predict",
+    "questionText": "Will FIFO fault more with 4 frames on Belady's string?",
+    "options": [
+     {
+      "label": "yes"
+     },
+     {
+      "label": "no"
+     }
+    ],
+    "answers": [
+     {
+      "label": "no",
+      "index": 2
+     }
+    ],
+    "correct": false,
+    "correctIndices": [
+     1
+    ],
+    "confidence": 90,
+    "answeredAt": "2026-11-09T12:04:30Z"
+   }
+  },
+  {
+   "id": "m6",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_q2",
+     "name": "quiz",
+     "arguments": {
+      "question": "Which policy is a stack algorithm?",
+      "questionType": "check",
+      "options": [
+       "FIFO",
+       "LRU",
+       "Random"
+      ]
+     }
+    }
+   ],
+   "timestamp": 1794226980000
+  },
+  {
+   "id": "m7",
+   "role": "toolResult",
+   "toolCallId": "call_q2",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "tool": "quiz",
+    "questionType": "check",
+    "questionText": "Which policy is a stack algorithm?",
+    "options": [
+     {
+      "label": "Random"
+     },
+     {
+      "label": "FIFO"
+     },
+     {
+      "label": "LRU"
+     }
+    ],
+    "answers": [
+     {
+      "label": "LRU",
+      "index": 3
+     }
+    ],
+    "correct": true,
+    "correctIndices": [
+     3
+    ],
+    "confidence": 60,
+    "answeredAt": "2026-11-09T12:24:30Z"
+   },
+   "timestamp": 1794227040000
+  },
+  {
+   "id": "m8",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_q3",
+     "name": "quiz",
+     "arguments": {
+      "question": "What sets the dirty bit?",
+      "questionType": "check"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m9",
+   "role": "toolResult",
+   "toolCallId": "call_q3",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "questionType": "check",
+    "questionText": "What sets the dirty bit?",
+    "options": [
+     {
+      "label": "the OS"
+     },
+     {
+      "label": "the MMU on a write"
+     }
+    ],
+    "dontKnow": true,
+    "correctIndices": [
+     2
+    ],
+    "answeredAt": "2026-11-09T12:25:30Z"
+   }
+  },
+  {
+   "id": "m10",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_q4",
+     "name": "quiz",
+     "arguments": {
+      "question": "Skipped one",
+      "questionType": "check"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m11",
+   "role": "toolResult",
+   "toolCallId": "call_q4",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "questionType": "check",
+    "dismissed": true
+   }
+  },
+  {
+   "id": "m12",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_q5",
+     "name": "quiz",
+     "arguments": {
+      "question": "Broken one"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m13",
+   "role": "toolResult",
+   "toolCallId": "call_q5",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "correct": true,
+    "confidence": 50
+   },
+   "isError": true
+  },
+  {
+   "id": "m14",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_a1",
+     "name": "ask_user_question",
+     "arguments": {
+      "question": "What is your goal?"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m15",
+   "role": "toolResult",
+   "toolCallId": "call_a1",
+   "toolName": "ask_user_question",
+   "content": "summary",
+   "details": {
+    "kind": "ask",
+    "text": "pass the exam"
+   }
+  },
+  {
+   "id": "m16",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_r1",
+     "name": "recall",
+     "arguments": {
+      "question": "Explain the TLB"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m17",
+   "role": "toolResult",
+   "toolCallId": "call_r1",
+   "toolName": "recall",
+   "content": "summary",
+   "details": {
+    "kind": "explain",
+    "text": "a cache",
+    "committed": "a cache of PTEs"
+   }
+  },
+  {
+   "id": "m18",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_dup",
+     "name": "quiz",
+     "arguments": {
+      "question": "What is a TLB?",
+      "questionType": "check"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m19",
+   "role": "toolResult",
+   "toolCallId": "call_dup",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "questionType": "check",
+    "options": [
+     {
+      "label": "a cache of translations"
+     },
+     {
+      "label": "a disk"
+     }
+    ],
+    "correct": true,
+    "correctIndices": [
+     1
+    ],
+    "confidence": 80,
+    "answeredAt": "2026-11-09T12:27:30Z"
+   }
+  },
+  {
+   "id": "m20",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "..."
+    },
+    {
+     "type": "toolCall",
+     "id": "call_dup",
+     "name": "quiz",
+     "arguments": {
+      "question": "What does a TLB miss cost?",
+      "questionType": "check"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m21",
+   "role": "toolResult",
+   "toolCallId": "call_dup",
+   "toolName": "quiz",
+   "content": "summary",
+   "details": {
+    "kind": "quiz",
+    "questionType": "check",
+    "options": [
+     {
+      "label": "a page-table walk"
+     },
+     {
+      "label": "a reboot"
+     }
+    ],
+    "correct": false,
+    "correctIndices": [
+     1
+    ],
+    "confidence": 40,
+    "answeredAt": "2026-11-09T12:28:30Z"
+   }
+  }
+ ]
+}
