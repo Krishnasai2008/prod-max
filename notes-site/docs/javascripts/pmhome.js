@@ -159,6 +159,7 @@ async function pmHomePage() {
   box.querySelector("summary").innerHTML = planSummary(pm, new Date());
   box.insertAdjacentHTML("beforeend", `<div class="plan-body"></div>`);
   const body = box.querySelector(".plan-body");
+  if (typeof versusMount === "function") versusMount(box, pm);  // pmversus.js: the Versus box under this one, same data
   // entries the laptop applied are done; failures stay until dismissed
   const { waiting, failed } = planPending(load(PLAN_KEY, []), pm);
   save(PLAN_KEY, [...waiting, ...failed]);

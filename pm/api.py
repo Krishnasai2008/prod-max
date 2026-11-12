@@ -1,5 +1,6 @@
 """The JSON API behind pm ui: one request in, one status and body out. No SQL, no clock."""
 import math
+import os
 import random
 import re
 import shutil
@@ -10,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from pm import agent, bank, generators, lh, mock, practice, spot, stats, suggest, templates, tutor
+from pm import agent, bank, generators, lh, mock, practice, spot, stats, suggest, templates, tutor, versus
 from pm.bugs import (episodes as bug_episodes, get_episode, runs as bug_runs, set_tags,
                      summary as bug_summary)
 from pm.calibrate import posteriors
@@ -1081,7 +1082,24 @@ def _allowed(parts: list[str]) -> str | None:
             return "POST" if CHAT_ID.fullmatch(chat_id) else None
         case ["api", "settings"]:
             return "GET or POST"
+        case ["api", "versus"]:
+            return "GET"
+        case ["api", "versus", "sync"]:
+            return "POST"
     return None
+
+
+def _versus(conn, now: datetime) -> dict:
+    return {"on": bool(get_setting(conn, "versus_url", "")), "board": versus.cached(conn, now.date())}
+
+
+def _versus_sync(conn, now: datetime) -> dict:
+    url = get_setting(conn, "versus_url", "")
+    if not url:
+        raise ValueError("set the scoreboard address in Settings first")
+    netrc_path = os.environ.get("PM_NETRC")
+    versus.sync(conn, now, url, Path(netrc_path) if netrc_path else None)
+    return _versus(conn, now)
 
 
 def handle(conn, method: str, path: str, query: dict[str, str], body: dict,
@@ -1106,6 +1124,10 @@ def handle(conn, method: str, path: str, query: dict[str, str], body: dict,
                 return 200, _bug(conn, _task_id(bug_id))
             case ("POST", ["api", "bugs", bug_id, "tags"]):
                 return 200, _bug_tags(conn, _task_id(bug_id), body)
+            case ("GET", ["api", "versus"]):
+                return 200, _versus(conn, now)
+            case ("POST", ["api", "versus", "sync"]):
+                return 200, _versus_sync(conn, now)
             case ("GET", ["api", "settings"]):
                 return 200, _settings(conn)
             case ("POST", ["api", "settings"]):

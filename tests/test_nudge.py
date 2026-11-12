@@ -78,6 +78,18 @@ class TestSend(unittest.TestCase):
             send(["hello"])
         run.assert_called_once_with(["/usr/bin/notify-send", "-a", "pm", "pm", "hello"])
 
+    def test_a_mac_notifies_with_the_message_as_an_argument(self):
+        message = 'x" & do shell script "id'
+        with mock.patch("pm.nudge.sys.platform", "darwin"), \
+                mock.patch("pm.nudge.shutil.which", return_value="/usr/bin/osascript") as which, \
+                mock.patch("pm.nudge.subprocess.run") as run, redirect_stdout(io.StringIO()):
+            send([message])
+        which.assert_called_once_with("osascript")
+        argv = run.call_args.args[0]
+        self.assertEqual(argv[0], "/usr/bin/osascript")
+        self.assertEqual(argv[-1], message)
+        self.assertFalse(any(message in part for part in argv[:-1]))
+
     def test_subprocess_failure_is_ignored(self):
         out = io.StringIO()
         with mock.patch("pm.nudge.shutil.which", return_value="/usr/bin/notify-send"), \

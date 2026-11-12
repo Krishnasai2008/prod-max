@@ -9,6 +9,7 @@ const FIELDS = {
   watch_ignore: ["Ignored folders", "folders under the watched ones to skip, separated by :"],
   course_codes: ["Course codes", "name=CODE pairs separated by ; like os=CS F372"],
   notes_url: ["Notes site address", "https://…; where pm stats --push sends the summary"],
+  versus_url: ["Scoreboard address", "https://…; the site that holds the versus scoreboard (yours or a friend's); empty turns it off"],
   agent_daily_calls: ["Model calls a day", "how many times the background jobs may call the language model each day; 0 turns them off"],
   lh_dir: ["LearnHarness data folder", "leave empty to use ~/.config/LearnHarness/data; pm only reads it"],
   llm_cmd: ["Language model command", "a command that reads a prompt on stdin and prints the reply; used for spot-the-error"],

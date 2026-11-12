@@ -381,6 +381,19 @@ class TestFiles(unittest.TestCase):
         self.assertIs(kwargs["stderr"], subprocess.DEVNULL)
         self.assertIs(kwargs["start_new_session"], True)
 
+    def test_a_mac_opens_with_open(self):
+        ids = self.index("a.pdf")
+        target = str((self.root / "a.pdf").resolve())
+        with mock.patch("pm.files.sys.platform", "darwin"):
+            with mock.patch("pm.files.shutil.which", return_value=None):
+                with self.assertRaisesRegex(ValueError, "^open is not installed$"):
+                    open_file(self.c, ids["a.pdf"])
+            with mock.patch("pm.files.shutil.which", return_value="/usr/bin/open") as which, \
+                    mock.patch("pm.files.subprocess.Popen") as popen:
+                open_file(self.c, ids["a.pdf"])
+        which.assert_called_once_with("open")
+        self.assertEqual(popen.call_args.args, (["/usr/bin/open", target],))
+
     def test_a_failed_launch_is_a_value_error(self):
         ids = self.index("a.pdf")
         for func in (open_file, reveal):

@@ -15,7 +15,10 @@ You need a GitHub account with your copy of this repo (fork it) and a free Cloud
    - Root directory: `notes-site`
 2. **Add your login.** In the Pages project → Settings → Variables and Secrets, add `SITE_USER` and
    `SITE_PASSWORD` (choose the type "Secret" for the password). For a second person, add `SITE_USER_2` and
-   `SITE_PASSWORD_2`. Each login keeps its own progress, stats and planner.
+   `SITE_PASSWORD_2`. Each login keeps its own progress, stats and planner. Optional: to host a
+   `pm versus` scoreboard for friends, add `VERSUS_USER` and `VERSUS_PASSWORD` per friend
+   (`VERSUS_USER_2` + `VERSUS_PASSWORD_2` for the next one). That login opens only the scoreboard, nothing
+   else on the site. Redeploy after adding variables.
 3. **Add storage.** Workers & Pages → KV → Create a namespace (any name). Then in the Pages project →
    Settings → Bindings → Add → KV namespace, with the variable name `BACKUP` and that namespace.
 4. **Set the address.** Put your site's address (`https://<project>.pages.dev/`) as `site_url` in
@@ -49,7 +52,8 @@ pm stats --push      # prints "pushed N KB to <project>.pages.dev"
 ```
 
 The daemon (`pm watch --install`) pushes every hour and picks up what you add on the site's home page every
-5 minutes. The stats page is at `/stats/`.
+5 minutes. The stats page is at `/stats/`. With pm's `versus_url` set, the home page also shows a
+Versus box under the Planner box (see the main README's Versus section).
 
 ## Tests
 

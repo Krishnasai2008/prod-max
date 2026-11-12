@@ -2,6 +2,7 @@
 import json
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 
 from pm.db import get_setting, set_setting
@@ -46,12 +47,21 @@ def due(conn, now: datetime, tasks: list[Task], risks: list[TaskRisk]) -> list[s
     return messages
 
 
-def send(messages: list[str]) -> None:
+def _notify(message: str) -> list[str] | None:
+    if sys.platform == "darwin":
+        exe = shutil.which("osascript")  # the message is an argument, never part of the script
+        return exe and [exe, "-e", "on run argv", "-e",
+                        'display notification (item 1 of argv) with title "pm"', "-e", "end run", message]
     exe = shutil.which("notify-send")
+    return exe and [exe, "-a", "pm", "pm", message]
+
+
+def send(messages: list[str]) -> None:
     for message in messages:
-        if exe is not None:
+        argv = _notify(message)
+        if argv:
             try:
-                subprocess.run([exe, "-a", "pm", "pm", message])
+                subprocess.run(argv)
             except (OSError, subprocess.SubprocessError):
                 pass
         print(f"nudge: {message}", flush=True)

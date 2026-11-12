@@ -93,3 +93,4 @@ extra_javascript:
   - javascripts/today.js     # to-do list, study clock and stats (needs study.js first)
   - javascripts/pmstats.js   # stats page from pm stats --push (needs today.js first)
   - javascripts/pmhome.js    # planner box on the home page, from pm stats --push (needs pmstats.js first)
+  - javascripts/pmversus.js  # Versus box under the planner, from the same /api/pm (needs pmhome.js first)

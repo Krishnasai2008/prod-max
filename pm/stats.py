@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from pm import versus
 from pm.bugs import episodes, summary
 from pm.calibrate import Posterior, median_ratio, posteriors
 from pm.db import get_setting, set_setting
@@ -240,6 +241,7 @@ def build(conn, now: datetime, tasks: list[Task], risks: list[TaskRisk], crunch:
         "study": _study(conn, now, notes_dir(conn)),
         "bugs": _bugs(conn, now.date()),
         "inbox_done": inbox_done(conn),
+        "versus": versus.cached(conn, now.date()),  # the scoreboard as of the last sync; None when it's off
     }
 
 

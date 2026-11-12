@@ -164,6 +164,52 @@ class TestTick(unittest.TestCase):
         self.assertIn("pushed 1 KB", lines)
         self.assertFalse(any(line.startswith("pull failed:") for line in lines))
 
+    def test_hourly_tick_syncs_the_scoreboard_before_the_push(self):
+        set_setting(self.c, "notes_url", "https://x.dev")
+        set_setting(self.c, "versus_url", "https://x.dev")
+        card = {"version": 1, "generated": "2026-11-09T09:00:00", "days": {"2026-11-08": {"min": 30}}}
+        self.site.bodies["/api/versus"] = json.dumps({"you": "u", "cards": {"u": card, "sam": card}}).encode()
+        lines, last = self.tick(NOW, None)
+        self.assertEqual(self.site.requests, [("GET", "/api/pm-inbox"), ("GET", "/api/backup"), ("PUT", "/api/versus"),
+                                              ("GET", "/api/versus"), ("PUT", "/api/pm")])
+        self.assertIn("versus: 2 players", lines)
+        sent = json.loads(self.site.sent[2][2])
+        self.assertEqual((sent["version"], sent["generated"]), (1, "2026-11-09T10:00:00"))
+        pushed = json.loads(self.site.sent[-1][2])
+        self.assertEqual(pushed["versus"]["players"], ["sam", "u"])
+        self.assertEqual(pushed["versus"]["you"], "u")
+        self.tick(NOW + timedelta(seconds=10), last)
+        self.assertEqual(len(self.site.requests), 5)
+
+    def test_the_scoreboard_can_live_on_another_site_and_needs_no_notes_site(self):
+        set_setting(self.c, "versus_url", "https://x.dev")
+        self.site.bodies["/api/versus"] = b'{"you": null, "cards": {}}'
+        lines, _ = self.tick(NOW, None)
+        self.assertEqual(self.site.requests, [("PUT", "/api/versus"), ("GET", "/api/versus")])
+        self.assertIn("versus: 0 players", lines)
+
+    def test_a_scoreboard_failure_is_one_log_line_and_the_push_still_runs(self):
+        set_setting(self.c, "notes_url", "https://x.dev")
+        set_setting(self.c, "versus_url", "https://x.dev")
+        for body, line in ((b"null", "versus failed: the scoreboard's reply is not a set of cards"),
+                           (b"<html>", "versus failed: the scoreboard's reply is not JSON")):
+            with self.subTest(body=body):
+                self.site.bodies["/api/versus"] = body
+                lines, _ = self.tick(NOW, None)
+                self.assertEqual([x for x in lines if x.startswith("versus")], [line])
+                self.assertIn("pushed 1 KB", lines)
+                self.assertIsNone(json.loads(self.site.sent[-1][2])["versus"])
+        self.site.errors["/api/versus"] = HTTPError("https://x.dev/api/versus", 401, "no", {}, None)
+        lines, _ = self.tick(NOW, None)
+        self.assertEqual(sum(x.startswith("versus failed: HTTP 401") for x in lines), 1)
+        self.assertIn("pushed 1 KB", lines)
+
+    def test_without_versus_url_the_scoreboard_is_never_asked(self):
+        set_setting(self.c, "notes_url", "https://x.dev")
+        self.tick(NOW, None)
+        self.assertNotIn("/api/versus", [path for _, path in self.site.requests])
+        self.assertIsNone(json.loads(self.site.sent[-1][2])["versus"])
+
     def test_a_quick_tick_does_not_pull_again(self):
         set_setting(self.c, "notes_url", "https://x.dev")
         _, last = self.tick(NOW, None)

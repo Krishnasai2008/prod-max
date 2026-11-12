@@ -1197,6 +1197,48 @@ class TestStudyApi(StudyCase):
                          (405, {"error": "use POST"}))
 
 
+class TestApiVersus(ApiCase):
+    REPLY = {"you": "kel", "cards": {
+        "kel": {"version": 1, "generated": "2026-11-09T09:00:00", "days": {"2026-11-08": {"min": 60}}},
+        "sam": {"version": 1, "generated": "2026-11-09T09:00:00", "days": {"2026-11-08": {"min": 30}}}}}
+
+    def test_off_and_empty(self):
+        self.assertEqual(self.call("GET", "/api/versus"), (200, {"on": False, "board": None}))
+        with mock.patch("pm.api.versus.sync") as sync:
+            self.assertEqual(self.call("POST", "/api/versus/sync"),
+                             (400, {"error": "set the scoreboard address in Settings first"}))
+        sync.assert_not_called()
+        self.assertEqual(self.call("POST", "/api/settings", {"key": "versus_url", "value": "ftp://x"}),
+                         (400, {"error": "versus_url must be empty or https://your-site"}))
+        self.assertEqual(self.call("POST", "/api/settings", {"key": "versus_url", "value": "https://hub.dev"})[0], 200)
+        self.assertEqual(self.call("GET", "/api/versus"), (200, {"on": True, "board": None}))
+
+    def test_sync_returns_the_board(self):
+        set_setting(self.c, "versus_url", "https://hub.dev")
+
+        def fake(conn, now, url, netrc_path=None):
+            self.assertEqual(url, "https://hub.dev")
+            set_setting(conn, "versus_cards", json.dumps(self.REPLY))
+            return 2
+
+        with mock.patch("pm.api.versus.sync", side_effect=fake):
+            code, data = self.call("POST", "/api/versus/sync")
+        self.assertEqual(code, 200)
+        self.assertEqual((data["on"], data["board"]["you"], data["board"]["tally"]), (True, "kel", {"kel": 1, "sam": 0}))
+        self.assertEqual(self.call("GET", "/api/versus")[1], data)
+
+    def test_a_failed_sync_is_a_400_and_keeps_the_old_board(self):
+        set_setting(self.c, "versus_url", "https://hub.dev")
+        set_setting(self.c, "versus_cards", json.dumps(self.REPLY))
+        with mock.patch("pm.api.versus.sync", side_effect=ValueError("versus failed: HTTP 401")):
+            self.assertEqual(self.call("POST", "/api/versus/sync"), (400, {"error": "versus failed: HTTP 401"}))
+        self.assertEqual(self.call("GET", "/api/versus")[1]["board"]["players"], ["kel", "sam"])
+
+    def test_methods(self):
+        self.assertEqual(self.call("POST", "/api/versus")[0], 405)
+        self.assertEqual(self.call("GET", "/api/versus/sync")[0], 405)
+
+
 if __name__ == "__main__":
     unittest.main()
 

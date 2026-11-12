@@ -9,6 +9,9 @@
 //    /stats/. Same KV namespace, its own key, so it can never overwrite the backup.
 // 4. /api/pm-inbox: tasks and time sent from the home page's Planner box (javascripts/pmhome.js) for
 //    the laptop to pick up (`pm inbox`). Its own key again: the site writes pm-inbox:, the laptop pm:.
+// 5. /api/versus: the study scoreboard (`pm versus`). Each player's laptop PUTs its own card (numbers per day)
+//    under versus:<login> and GETs everyone's. Friends get a scoreboard-only login, VERSUS_USER + VERSUS_PASSWORD
+//    (more: VERSUS_USER_2 + VERSUS_PASSWORD_2, ...): it opens /api/versus and nothing else on the site.
 export async function onRequest({ request, next, env }) {
   const logins = Object.keys(env).filter(k => k.startsWith("SITE_USER"))
     .map(k => [env[k], env["SITE_PASSWORD" + k.slice("SITE_USER".length)]])
@@ -19,13 +22,23 @@ export async function onRequest({ request, next, env }) {
   const auth = request.headers.get("Authorization") || "";
   const basic = s => "Basic " + btoa(String.fromCharCode(...new TextEncoder().encode(s)));  // UTF-8, as browsers send it
   const login = logins.find(([user, password]) => auth === basic(`${user}:${password}`));
+  const path = new URL(request.url).pathname;
+  if (path === "/api/versus") {
+    const names = logins.map(([user]) => user);
+    const guests = [];  // a guest can't take a site login's name, or another guest's: the first one keeps it
+    for (const k of Object.keys(env).filter(k => k.startsWith("VERSUS_USER")).sort()) {
+      const user = env[k], password = env["VERSUS_PASSWORD" + k.slice("VERSUS_USER".length)];
+      if (user && password && !names.includes(user)) { names.push(user); guests.push([user, password]); }
+    }
+    const player = login || guests.find(([user, password]) => auth === basic(`${user}:${password}`));
+    if (player) return versus(request, env, player[0], names);
+  }
   if (!login) {
     return new Response("Login required", {
       status: 401,
       headers: { "WWW-Authenticate": 'Basic realm="My Notes", charset="UTF-8"' },
     });
   }
-  const path = new URL(request.url).pathname;
   if (path === "/api/backup") return store(request, env, "backup:" + login[0], 5_000_000);  // one copy per login
   if (path === "/api/pm") return store(request, env, "pm:" + login[0], 1_000_000);
   if (path === "/api/pm-inbox") return store(request, env, "pm-inbox:" + login[0], 100_000);
@@ -52,4 +65,16 @@ async function store(request, env, key, max) {  // one JSON object per key: GET 
   }
   await env.BACKUP.put(key, body);
   return new Response(null, { status: 204 });
+}
+
+async function versus(request, env, you, names) {  // PUT: your own card, never anyone else's. GET: every player's card
+  if (request.method !== "GET") return store(request, env, "versus:" + you, 100_000);
+  if (!env.BACKUP) return new Response("Storage is not linked yet.", { status: 503 });
+  const cards = {};
+  for (const name of names) {
+    const text = await env.BACKUP.get("versus:" + name);
+    try { if (text) cards[name] = JSON.parse(text); } catch { /* a card that isn't JSON is left out */ }
+  }
+  return new Response(JSON.stringify({ you, cards }),
+    { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 }

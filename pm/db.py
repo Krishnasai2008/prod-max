@@ -118,6 +118,8 @@ CREATE TABLE IF NOT EXISTS suggestions(
   subject TEXT NOT NULL, value TEXT NOT NULL, created TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','accepted','rejected')),
   UNIQUE(kind, subject, value));
+CREATE TABLE IF NOT EXISTS versus_days(
+  day TEXT PRIMARY KEY, syllabus REAL NOT NULL CHECK(syllabus BETWEEN 0 AND 100));
 """
 
 # Every graded answer, wherever it is stored: reviews and spot cards stay in their own tables.
@@ -157,7 +159,7 @@ def _view(conn: sqlite3.Connection, name: str, sql: str) -> None:
         conn.commit()
 
 
-VERSION = 13
+VERSION = 14
 SEEN = "watch_seen"  # internal: when the daemon last ticked (pm doctor reads it)
 
 
@@ -208,7 +210,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
 
 DEFAULTS = {"hours_per_day": "4", "peak": "09-12", "notes_url": "", "notes_dir": "",
             "watch": "~/Downloads", "watch_ignore": "", "course_codes": "", "nudge_hours": "08-22",
-            "new_per_day": "10", "llm_cmd": "", "lh_dir": "", "agent_daily_calls": "0"}
+            "new_per_day": "10", "llm_cmd": "", "lh_dir": "", "agent_daily_calls": "0", "versus_url": ""}
 
 
 def get_setting(conn: sqlite3.Connection, key: str, default: str) -> str:
@@ -269,16 +271,16 @@ def put_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
             calls = -1
         if not 0 <= calls <= 500:
             raise ValueError("agent_daily_calls must be between 0 and 500")
-    if key == "notes_url" and value:
+    if key in ("notes_url", "versus_url") and value:
         parts = urlsplit(value)
         try:
             parts.port
         except ValueError:
-            raise ValueError("notes_url must be empty or https://your-site") from None
+            raise ValueError(f"{key} must be empty or https://your-site") from None
         if (not value.startswith("https://") or not parts.hostname
                 or any(ch.isspace() for ch in value)
                 or parts.query or parts.fragment):
-            raise ValueError("notes_url must be empty or https://your-site")
+            raise ValueError(f"{key} must be empty or https://your-site")
     if key == "notes_dir" and value:
         try:
             folder = Path(value).expanduser().resolve()

@@ -9,7 +9,7 @@
 - **Bug tracking.** It logs failing commands, finds the diff that fixed them and tags the kind of bug.
 - **Files.** It indexes your Downloads for full-text search. It also nudges you when a task should start and pushes a stats page to your notes site.
 
-Everything is stored in one SQLite file, `~/.local/share/prod-max/pm.db`, created by the first command you run. Three things can send data off your machine, and each is off until you set it up: the stats push to your notes site (`notes_url`), prompts to a model (`llm_cmd`: parts of your notes and questions go to whatever that command talks to), and the LearnHarness tutor plugin (what its tools return goes to LearnHarness's model provider). The daemon also reads your study clock and phone inbox from the notes site.
+Everything is stored in one SQLite file, `~/.local/share/prod-max/pm.db`, created by the first command you run. Four things can send data off your machine, and each is off until you set it up: the stats push to your notes site (`notes_url`), the scoreboard sync (`versus_url`: numbers per day only, see [Versus](#versus)), prompts to a model (`llm_cmd`: parts of your notes and questions go to whatever that command talks to), and the LearnHarness tutor plugin (what its tools return goes to LearnHarness's model provider). The daemon also reads your study clock and phone inbox from the notes site.
 
 ## Install
 
@@ -17,9 +17,11 @@ Everything is stored in one SQLite file, `~/.local/share/prod-max/pm.db`, create
 uv tool install --editable .      # puts `pm` on your PATH
 ```
 
-It needs Linux with systemd, Python 3.12 or newer and [uv](https://docs.astral.sh/uv/). On a new machine, clone the repo first and run that line inside it. The notes site that goes with `pm` is in `notes-site/`; its [README](notes-site/README.md) says how to put your own copy online.
+It needs Linux with systemd or macOS, Python 3.12 or newer and [uv](https://docs.astral.sh/uv/). Windows is not supported; WSL works like Linux, except that opening files and desktop nudges don't. On a new machine, clone the repo first and run that line inside it. The notes site that goes with `pm` is in `notes-site/`; its [README](notes-site/README.md) says how to put your own copy online.
 
 Without installing, run `uv run pm <cmd>` from this folder. The `--install` commands (`pm watch --install`, `pm ui --install`) need the installed `pm`, because the service has to find it.
+
+Setting up from scratch, step by step (settings, daemon, app, notes site, model, LearnHarness, scoreboard): [SETUP-linux.md](SETUP-linux.md) or [SETUP-mac.md](SETUP-mac.md).
 
 `pm doctor` shows what is set up: where the database is, whether the daemon is running, the folders it watches, the model command, and which of the optional programs below are installed.
 
@@ -31,8 +33,11 @@ These programs are optional. `pm` works without them and skips the feature that 
 | `pdfinfo` (poppler) | A PDF's page count, for listing its pages |
 | `pdftoppm` (poppler) | PDF pages as pictures in the app, and OCR of scans |
 | `tesseract` | Text from images (OCR) |
-| `notify-send` | Desktop nudges |
+| `notify-send` (Linux) | Desktop nudges |
+| `xdg-open` (Linux) | Opening files and links |
 | `git` | The fix diff of a bug in `pm run` |
+
+On macOS, nudges go through `osascript` and files open with `open`; both come with the system.
 
 ## Formats used everywhere
 
@@ -76,7 +81,7 @@ These programs are optional. `pm` works without them and skips the feature that 
 
 **Study** has the study-next pick and the top 5, your topics by course with a prerequisite graph and mastery bars, a form to add topics and edit their exam date and weight, the calibration chart (with the same numbers in a table under it) and the queue line. **Add items from a file** takes a path, lists the file's sections with the default pick ticked, and adds the ones you tick to a topic you choose or create.
 
-**Risk** is the deadline forecast as a timeline: each task's likely (50%) and worst-case (95%) finish against its due date, a days-late column, and two what-if sliders for hours a day and days lost before you start. Moving them recomputes without saving anything; **Use N h a day** saves `hours_per_day`, and **Reset** puts them back. **Stats** shows the same numbers as `pm stats`, locally and without pushing. **Bugs** has fixed/open/abandoned/time-lost tiles, the 7-day burst line, tags with counts (click to filter, **show all** to clear) and the 50 newest episodes; open one for its runs, tags (add with autocomplete, remove with ×) and fix diff. **Files** lists the 20 most recently indexed files, or up to 30 matches with the matched words highlighted and a course filter; each file has **Open** for document types only, **Show in folder**, and **Study this** to add part of it to a topic. **Settings** lists every setting with its current value and saves them one at a time, with the same checks and messages as `pm set`.
+**Risk** is the deadline forecast as a timeline: each task's likely (50%) and worst-case (95%) finish against its due date, a days-late column, and two what-if sliders for hours a day and days lost before you start. Moving them recomputes without saving anything; **Use N h a day** saves `hours_per_day`, and **Reset** puts them back. **Stats** shows the same numbers as `pm stats`, locally and without pushing. **Bugs** has fixed/open/abandoned/time-lost tiles, the 7-day burst line, tags with counts (click to filter, **show all** to clear) and the 50 newest episodes; open one for its runs, tags (add with autocomplete, remove with ×) and fix diff. **Files** lists the 20 most recently indexed files, or up to 30 matches with the matched words highlighted and a course filter; each file has **Open** for document types only, **Show in folder**, and **Study this** to add part of it to a topic. **Settings** lists every setting with its current value and saves them one at a time, with the same checks and messages as `pm set`. **Versus** (`v`) shows the scoreboard from the last sync, with **Sync now** (see [Versus](#versus)).
 
 Also: on **Tasks**, each task's links as chips (open one, remove one, or add a path or address); on **Today**, **Start** opens the task's links, a card asks how your energy was for a session you stopped in the last 30 minutes, and once there's enough data a hint offers the suggested peak hours with a button to use them; on **Study**, a spot-the-error line with **Make 3 cards** (when `llm_cmd` is set) and a link to the **Spot** screen (`#/spot`), which works like Review: bet first, then click the wrong line.
 
@@ -88,9 +93,9 @@ The page refreshes after every click, when you switch back to its tab, and every
 |---|---|
 | `pm ui` | Starts the app on `http://127.0.0.1:8321` and opens it in your browser. Ctrl-C stops it. If it's already running there, it prints `pm ui is already running: http://127.0.0.1:8321`, opens the page and exits 0. |
 | `pm ui --port 8399 --no-open` | Starts it on another port (1024–65535) without opening a browser. If another program has the port: `error: port 8399 is in use; try pm ui --port 8400`. |
-| `pm ui --install` | Writes the systemd user unit `pm-ui.service` (which runs `pm ui --no-open`) and prints the `systemctl --user daemon-reload && systemctl --user enable --now pm-ui` line to start it. It doesn't start it itself. |
+| `pm ui --install` | Writes the systemd user unit `pm-ui.service` (which runs `pm ui --no-open`) and prints the `systemctl --user daemon-reload && systemctl --user enable --now pm-ui` line to start it. On macOS it writes the launchd agent `~/Library/LaunchAgents/dev.prod-max.pm-ui.plist` instead and prints `start it: launchctl load -w <path>`. It doesn't start it itself. |
 
-Keys, not while typing in a field: `1` Today, `2` Tasks, `3` Review, `4` Study, `5` Risk, `6` Stats, `7` Bugs, `8` Files, `9` Settings, `0` Exam, `p` Practice, `/` jump to Files and focus the search box, `n` new task, `s` start the first planned task (or, while running, jump to the pause note), `?` help, `Esc` close help. On Review: before the answer is shown, `0`–`9` set the confidence (`0` is 100%, `7` is 70%) and `Enter` or `Space` shows it; then `1`–`4` grade it, and `Esc` goes back to Today.
+Keys, not while typing in a field: `1` Today, `2` Tasks, `3` Review, `4` Study, `5` Risk, `6` Stats, `7` Bugs, `8` Files, `9` Settings, `0` Exam, `p` Practice, `v` Versus, `/` jump to Files and focus the search box, `n` new task, `s` start the first planned task (or, while running, jump to the pause note), `?` help, `Esc` close help. On Review: before the answer is shown, `0`–`9` set the confidence (`0` is 100%, `7` is 70%) and `Enter` or `Space` shows it; then `1`–`4` grade it, and `Esc` goes back to Today.
 
 It listens only on `127.0.0.1` and refuses requests from other web sites (it checks the `Host` and `Origin` headers and requires JSON). Any program on your own machine can still use it. `PM_DB` and `PM_NOW` work as usual.
 
@@ -112,6 +117,7 @@ It listens only on `127.0.0.1` and refuses requests from other web sites (it che
 | `new_per_day` | `10` | At most this many never-reviewed items enter the review queue each day (1–200); the rest wait. |
 | `lh_dir` | *(empty)* | LearnHarness's data folder (the one that holds `chats/`). Empty means `~/.config/LearnHarness/data`. `pm` only reads it. |
 | `agent_daily_calls` | `0` | How many model calls the background jobs may make a day (0–500). `0` turns them off; commands you type yourself (`pm q vary`, `pm paper draft`, …) don't count against it. |
+| `versus_url` | *(empty)* | The scoreboard's hub site, `https://…` (yours or a friend's), for `pm versus`. Checked like `notes_url`. Empty turns the scoreboard off. |
 
 ## Study (spaced repetition)
 
@@ -225,9 +231,9 @@ Auto-tags: `off-by-one`, `overflow`, `uninit`, `null-check` and `bounds` come fr
 | Command | What it does |
 |---|---|
 | `pm find WORDS… [--course C]` | Full-text search of the indexed files, ranked by relevance; a match in the file name counts 5× more than one in the text. It finds files that contain all the words, with word stemming ("matrices" finds "matrix"). Prints the path, the course tag and a snippet with `[matches]`. |
-| `pm watch` | Runs the daemon in the foreground (usually systemd runs it). Every 10s it indexes up to 20 new or changed files. Once an hour it sends nudges and pushes stats. |
+| `pm watch` | Runs the daemon in the foreground (usually systemd or launchd runs it). Every 10s it indexes up to 20 new or changed files. Once an hour it sends nudges, syncs the scoreboard and pushes stats. |
 | `pm watch --once` | Runs one tick now and prints what it did. |
-| `pm watch --install` | Writes the systemd user unit `~/.config/systemd/user/pm-watch.service`. Then run `systemctl --user daemon-reload && systemctl --user enable --now pm-watch`. Logs: `journalctl --user -u pm-watch`. |
+| `pm watch --install` | Writes the systemd user unit `~/.config/systemd/user/pm-watch.service`. Then run `systemctl --user daemon-reload && systemctl --user enable --now pm-watch`. Logs: `journalctl --user -u pm-watch`. On macOS it writes the launchd agent `~/Library/LaunchAgents/dev.prod-max.pm-watch.plist` and prints `start it: launchctl load -w <path>`; its output is not kept (run `pm watch` in a terminal to see it). |
 
 What gets indexed:
 - **Formats with text:**
@@ -258,9 +264,9 @@ Nudges: once per task per day, within `nudge_hours`, for any task whose start-by
 | `pm stats --push` | Sends it to `notes_url` + `/api/pm` (HTTPS only, no redirects) and prints `pushed N KB to host`. The daemon also does this hourly once `notes_url` is set. |
 | `pm inbox` | Fetches what you added on the site's home page (`notes_url` + `/api/pm-inbox`), applies each entry once (`inbox: added #7 OS lab 3`, `inbox: logged 45m on #3`, `inbox: done #3`, or `inbox: add failed: …`), then pushes so the phone sees the answer. Nothing new: `inbox empty`. The daemon does this every 5 minutes. |
 
-The site's home page shows a **Planner** box from the push: today's plan, the day meter and the reviews due, each linking to its note when `notes_dir` is set. Its form sends a task, time logged on a planned task, or "done" back to the laptop. On a computer with a mouse it also links to the app (`http://127.0.0.1:8321`, opened in a new tab). The link works only on the laptop while `pm ui` runs, and it assumes the default port. It is hidden on touch screens. The app itself stays on the laptop: the site can't reach its database, and the app answers no request from another site.
+The site's home page shows a **Planner** box from the push: today's plan, the day meter and the reviews due, each linking to its note when `notes_dir` is set. Its form sends a task, time logged on a planned task, or "done" back to the laptop. With `versus_url` set, a **Versus** box under it shows the scoreboard. On a computer with a mouse the Planner box also links to the app (`http://127.0.0.1:8321`, opened in a new tab). The link works only on the laptop while `pm ui` runs, and it assumes the default port. It is hidden on touch screens. The app itself stays on the laptop: the site can't reach its database, and the app answers no request from another site.
 
-What the push contains: per-day totals, task titles, courses and first steps, due dates and risk, estimate ratios, topic names and mastery, review item titles (a prompt or a heading, or the note's name when it has a site address), note addresses on the site, bug programs and tags, and the ids of applied phone entries with any error. It never contains file paths, working directories, diffs, pause notes or full command lines. `pm` only reads your site's study clock (`/api/backup`, so the app's heatmap counts site study time); it never writes there.
+What the push contains: per-day totals, task titles, courses and first steps, due dates and risk, estimate ratios, topic names and mastery, review item titles (a prompt or a heading, or the note's name when it has a site address), note addresses on the site, bug programs and tags, the ids of applied phone entries with any error, and (with `versus_url` set) the scoreboard from the last sync: the players' names and their numbers. It never contains file paths, working directories, diffs, pause notes or full command lines. `pm` only reads your site's study clock (`/api/backup`, so the app's heatmap counts site study time); it never writes there.
 
 The push logs in with the credentials in `~/.netrc`. Python ignores that file unless only you can read it:
 
@@ -270,6 +276,35 @@ machine your-site.pages.dev login USER password PASS
 ```
 chmod 600 ~/.netrc
 ```
+
+## Versus
+
+A daily study contest with friends. Each player's `pm` sends a card to one site, the hub, and fetches everyone's. A card holds numbers per day only: minutes studied, reviews done, quiz answers right, test answers right and the syllabus level. No task titles, topic names or file names leave the laptop in it.
+
+| Command | What it does |
+|---|---|
+| `pm versus` | Prints the board from the last sync, without going online. Off: `versus is off: pm set versus_url https://the-scoreboard-site`. Before the first sync: `no scoreboard yet: pm versus --sync`. |
+| `pm versus --sync` | Sends your card to `versus_url` + `/api/versus`, fetches everyone's, then prints the board. The daemon does this hourly, before the stats push. |
+
+```
+versus · 2026-11-13 (live)
+                         you     sam
+minutes studied          185     140  you
+reviews done              42      60  sam
+quiz answers right        18      18
+test answers right         9       0  you
+syllabus gained         +2.1    -0.4  you
+today: you 3 · sam 1
+wins: you 1 · sam 0 · draws 1
+days of 30m or less: you 0 · sam 1
+score: you 1 · sam 0
+```
+
+How a day is won: there are five categories. Minutes come from timer sessions and `pm log`; reviews are review grades; quiz answers are right answers to practice problems, spot cards and other graded answers that aren't reviews or tests; test answers are right answers in mock tests; syllabus is the day's change in your average topic mastery. The one player ahead in a category (with more than 0) takes its point, and the most points wins the day. A day with no sole winner, on which somebody studied, is a draw. A final day on which you studied 30 minutes or less is a penalty day. Your overall score goes up by one for each day won and down by one for each penalty day, and never below zero. Today is live; a day is final once every player's `pm` has synced after it ended. The wins, draws and streak count the final days (up to 400) from the first day every player had started. It is an honour system: the board shows what each `pm` sends.
+
+Joining: `pm set versus_url https://the-hub-site` and a line for that host in `~/.netrc`; your login's user name is your name on the board. The hub owner plays with their normal site login and gives each friend a scoreboard-only login, which opens `/api/versus` and nothing else on the site. Step by step: [SETUP-linux.md](SETUP-linux.md#11-join-a-scoreboard) or [SETUP-mac.md](SETUP-mac.md#11-join-a-scoreboard).
+
+The app's **Versus** screen (`v`) shows the same board with **Sync now**. With `notes_url` set, the push carries the last board too, and your own site's home page shows it in a **Versus** box under the Planner box.
 
 ## Backup and undo
 

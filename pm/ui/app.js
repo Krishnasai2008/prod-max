@@ -13,8 +13,9 @@ import * as addstudy from "./addstudy.js";
 import * as spot from "./spot.js";
 import * as exam from "./exam.js";
 import * as practice from "./practice.js";
+import * as versus from "./versus.js";
 
-const screens = { today, tasks, review, study, risk, stats, bugs, files, settings, spot, exam, practice };
+const screens = { today, tasks, review, study, risk, stats, bugs, files, settings, spot, exam, practice, versus };
 
 const ROUTE_KEYS = {
   "1": "today",
@@ -28,6 +29,7 @@ const ROUTE_KEYS = {
   "9": "settings",
   "0": "exam",
   p: "practice",
+  v: "versus",
 };
 
 const screenEl = document.querySelector("#screen");

@@ -322,6 +322,25 @@ async function main() {
   await js(`document.querySelector('#screen [data-act="stop"]').click()`);
   check("stop goes back to the topics", await until(`${text}.includes("1 try, 0 right in 30 days")`));
 
+  // --- Versus (the scoreboard is off here: no address is set, so nothing may reach the network) ---
+  await js(`document.activeElement?.blur()`);
+  await key("v");
+  check("key v goes to Versus", await until(`location.hash === "#/versus" && ${text}.includes("The scoreboard is off")`));
+  check("versus offers no sync while it is off", !(await js(`!!document.querySelector('#screen [data-act="sync"]')`)));
+  // a board as the last sync would have left it (two cards; the address is never contacted: only Sync now would)
+  execFileSync("uv", ["run", "python", "-c", "import json; from pm.db import connect, default_path, put_setting, set_setting;"
+    + "c = connect(default_path()); put_setting(c, 'versus_url', 'https://hub.invalid');"
+    + "card = lambda m: {'version': 1, 'generated': '2020-01-03T09:00:00', 'days': {'2020-01-01': {'min': m}, '2020-01-02': {'min': 5}}};"
+    + "set_setting(c, 'versus_cards', json.dumps({'you': 'me', 'cards': {'me': card(90), '<b>sam</b>': card(30)}}))"],
+    { cwd: ROOT, env, stdio: "ignore" });
+  await key("1");
+  await until(`location.hash === "#/today"`);
+  await key("v");
+  check("versus shows the board with the tally", await until(`${text}.includes("you · days won") && ${text}.includes("<b>sam</b> · days won")`));
+  check("a player's name is text, not markup", !(await js(`!!document.querySelector('#screen .study-tiles small b')`)));
+  check("versus offers a sync once it is on", await js(`!!document.querySelector('#screen [data-act="sync"]')`));
+  await shot("versus");
+
   // --- LearnHarness (a fixture folder; pm only reads it) ---
   const lhDir = join(dir, "lh");
   mkdirSync(join(lhDir, "chats"), { recursive: true });

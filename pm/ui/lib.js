@@ -1,4 +1,4 @@
-export const ROUTES = ["today", "tasks", "review", "study", "risk", "stats", "bugs", "files", "settings", "spot", "exam", "practice"];
+export const ROUTES = ["today", "tasks", "review", "study", "risk", "stats", "bugs", "files", "settings", "spot", "exam", "practice", "versus"];
 
 const ESCAPES = {
   "&": "&amp;",

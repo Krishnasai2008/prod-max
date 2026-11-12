@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import json
 import os
+import plistlib
 import random
 import shlex
 import shutil
@@ -18,7 +19,7 @@ from urllib.request import urlopen
 from pm.bugs import episodes as bug_episodes
 from pm.bugs import get_episode, record_run, set_tags, summary
 from pm.calibrate import PRIOR, median_ratio, posteriors
-from pm import agent, bank, drafts, generators, lh, mock, practice, spot, suggest, templates, variants
+from pm import agent, bank, drafts, generators, lh, mock, practice, spot, suggest, templates, variants, versus
 from pm.grade import number as read_number
 from pm.db import SEEN, DEFAULTS, backup, connect, default_path, get_setting, put_setting, set_setting, settings
 from pm.energy import by_hour, suggest as suggest_peak
@@ -341,6 +342,17 @@ def _install_unit(name: str, description: str, command: str) -> None:
     pm = shutil.which("pm")
     if pm is None:
         raise ValueError("install pm first: uv tool install --editable .")
+    if sys.platform == "darwin":
+        path = Path.home() / f"Library/LaunchAgents/dev.prod-max.{name}.plist"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("wb") as f:
+            # launchd starts with a bare PATH: keep this one, so Homebrew's pdftotext and llm_cmd are found
+            plistlib.dump({"Label": f"dev.prod-max.{name}", "ProgramArguments": [pm, *command.split()],
+                           "RunAtLoad": True, "KeepAlive": True,
+                           "EnvironmentVariables": {"PATH": os.environ.get("PATH", "")}}, f)
+        print(f"wrote {path}")
+        print(f"start it: launchctl load -w {path}")
+        return
     base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     path = base / f"systemd/user/{name}.service"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -465,6 +477,8 @@ def _parser() -> argparse.ArgumentParser:
     ss = sub.add_parser("stats", help="everything pm knows, as JSON")
     ss.add_argument("--push", action="store_true", help="send it to the notes site")
     sub.add_parser("inbox", help="apply what was captured on the phone")
+    vs = sub.add_parser("versus", help="the study scoreboard against your friends")
+    vs.add_argument("--sync", action="store_true", help="send your numbers and fetch everyone's first")
     fd = sub.add_parser("find", help="search the file index")
     fd.add_argument("words", nargs="+", metavar="WORDS")
     fd.add_argument("--course")
@@ -1326,6 +1340,19 @@ def _run(args, conn, now) -> int:
             sent = push(data, url, netrc_path)
             host = urlsplit(url).hostname or url
             print(f"pushed {max(1, round(sent / 1024))} KB to {host}")
+        case "versus":
+            url = get_setting(conn, "versus_url", DEFAULTS["versus_url"])
+            if not url:
+                print("versus is off: pm set versus_url https://the-scoreboard-site")
+                return 0
+            if args.sync:
+                versus.sync(conn, now, url, _netrc_path())
+            b = versus.cached(conn, now.date())
+            if b is None:
+                print("no scoreboard yet: pm versus --sync")
+                return 0
+            for line in versus.text(b):
+                print(line)
         case "inbox":
             url = get_setting(conn, "notes_url", DEFAULTS["notes_url"])
             netrc_path = _netrc_path()
@@ -1381,7 +1408,8 @@ def _run(args, conn, now) -> int:
 PROGRAMS = (("pdftotext", "text from PDFs, for search and excerpts"), ("pdfinfo", "page counts of PDFs"),
             ("pdftoppm", "PDF pages as pictures in the app, and OCR"), ("tesseract", "OCR for scanned PDFs"),
             ("git", "what changed between a failing and a passing pm run"),
-            ("notify-send", "desktop nudges"), ("xdg-open", "opening files and links"),
+            *((("osascript", "desktop nudges"), ("open", "opening files and links")) if sys.platform == "darwin"
+              else (("notify-send", "desktop nudges"), ("xdg-open", "opening files and links"))),
             ("node", "only for LearnHarness's pm-bridge plugin and pm's own tests"))
 
 

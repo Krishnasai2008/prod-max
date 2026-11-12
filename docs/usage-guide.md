@@ -23,11 +23,12 @@ long version. A full worked example is at the end ([A typical two days with pm](
 15. [File search and the daemon](#file-search-and-the-daemon)
 16. [Nudges](#nudges)
 17. [The notes site](#the-notes-site)
-18. [Settings](#settings)
-19. [Backup and undo](#backup-and-undo)
-20. [Trying things safely](#trying-things-safely)
-21. [A typical two days with pm](#a-typical-two-days-with-pm)
-22. [Troubleshooting](#troubleshooting)
+18. [Versus: studying against friends](#versus-studying-against-friends)
+19. [Settings](#settings)
+20. [Backup and undo](#backup-and-undo)
+21. [Trying things safely](#trying-things-safely)
+22. [A typical two days with pm](#a-typical-two-days-with-pm)
+23. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -57,6 +58,10 @@ pm add --help                     # flags for one command
 Without installing, run `uv run pm <cmd>` from the project folder. The two `--install` commands
 (`pm watch --install`, `pm ui --install`) need the installed `pm`.
 
+`pm` runs on Linux and macOS. Step-by-step setup for each: [SETUP-linux.md](../SETUP-linux.md) and
+[SETUP-mac.md](../SETUP-mac.md). On a Mac the background services are launchd agents instead of
+systemd units, nudges go through `osascript` and files open with `open`.
+
 `pm doctor` checks your setup at any time: the database, whether the daemon is running, the folders
 it watches, the model command, and which optional programs are installed.
 
@@ -70,8 +75,8 @@ pm set watch ~/Downloads          # folders to index for `pm find`
 
 Optional programs (each one unlocks a feature, nothing breaks without them):
 `pdftotext` (PDF text), `pdfinfo` (PDF page counts), `pdftoppm` (PDF pages as pictures in the app,
-and OCR of scans), `tesseract` (OCR of images and scanned PDFs), `notify-send` (desktop nudges),
-`git` (fix diffs in `pm run`). `pm doctor` lists which ones you have.
+and OCR of scans), `tesseract` (OCR of images and scanned PDFs), `notify-send` (desktop nudges on
+Linux; macOS has `osascript` built in), `git` (fix diffs in `pm run`). `pm doctor` lists which ones you have.
 
 ## Input formats
 
@@ -411,7 +416,8 @@ you started with `pm start` in a terminal shows up there. It never wipes what yo
 
 **Exam** (`0`) builds and runs timed mock tests and holds the question bank; see
 [Testing yourself](#testing-yourself). **Practice** (`p`) gives generated problems that the code
-checks; see [Practice](#practice). **Spot** has no key: open it from the Study screen.
+checks; see [Practice](#practice). **Versus** (`v`) is the study scoreboard against friends; see
+[Versus](#versus-studying-against-friends). **Spot** has no key: open it from the Study screen.
 
 ### Keys
 
@@ -430,6 +436,7 @@ Not while you are typing in a field:
 | `9` | Settings |
 | `0` | Exam |
 | `p` | Practice |
+| `v` | Versus |
 | `/` | jump to Files and focus the search box |
 | `n` | new task |
 | `s` | start the first planned task; while running, jump to the pause note |
@@ -457,6 +464,10 @@ If **Open** or **Show in folder** does nothing when the app runs as the service,
 your desktop's display environment. Run
 `systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP` and restart the
 service (`systemctl --user restart pm-ui`); or run `pm ui` from a terminal, which always works.
+
+On macOS, `pm ui --install` writes the launchd agent
+`~/Library/LaunchAgents/dev.prod-max.pm-ui.plist` and prints `start it: launchctl load -w <path>`.
+Its output is not kept anywhere.
 
 ### Is it safe?
 
@@ -1245,10 +1256,16 @@ systemctl --user daemon-reload && systemctl --user enable --now pm-watch
 journalctl --user -u pm-watch   # its logs
 ```
 
+On macOS, `pm watch --install` writes the launchd agent
+`~/Library/LaunchAgents/dev.prod-max.pm-watch.plist` and prints the `launchctl load -w …` line that
+starts it. launchd keeps no log of it; to watch what it does, unload the agent and run `pm watch` in a
+terminal.
+
 Every 10 seconds the daemon indexes up to 20 new or changed files (a file is picked up after it has been
 unchanged for 10s, so half-finished downloads are skipped). Every 5 minutes, with `notes_url` set, it
 applies what you sent from the [site's Planner box](#sending-things-from-the-phone). Once an hour it
-sends [nudges](#nudges), reads the site's study clock and pushes [stats](#the-notes-site).
+sends [nudges](#nudges), reads the site's study clock, syncs the
+[scoreboard](#versus-studying-against-friends) and pushes [stats](#the-notes-site).
 
 What's readable: PDFs (scanned ones get OCR on their first 10 pages), images (OCR), docx/pptx/odt/odp,
 and plain text and code files. Everything else is found by file name only. Hidden files, symlinks,
@@ -1272,7 +1289,8 @@ Files are retagged automatically when these settings change.
 
 ## Nudges
 
-When the daemon runs, it sends a desktop notification (with `notify-send`) for any task whose
+When the daemon runs, it sends a desktop notification (with `notify-send` on Linux, `osascript` on
+macOS) for any task whose
 **start-by date has arrived** and that you haven't worked on today: "start #1 … today" or
 "behind on #1 …". There's at most one nudge per task per day, and only within `nudge_hours`
 (default `08-22`).
@@ -1312,6 +1330,12 @@ pm set notes_dir ~/prod-max/notes-site/docs
 
 The app's Review screen then also shows **open on the site** after you reveal the answer.
 
+At the bottom of the box, **Open the pm app** opens `http://127.0.0.1:8321` in a new tab. It works
+only on the laptop while `pm ui` runs, and only on the default port (a `pm ui --port` elsewhere isn't
+found). It is hidden on touch screens, where it would be a dead link. It is a plain link: the site
+never reads from the app, and the app answers no request from another site, so it stays a local app
+over your database rather than part of the site.
+
 ### Sending things from the phone
 
 The Planner box has a small form: **Add to pm** (a title, a length like `1h` and an optional due date
@@ -1331,7 +1355,8 @@ The push contains per-day totals, task titles, courses and first steps, due date
 ratios, topic names and mastery, review item titles (a prompt or a heading, or the note's name when it
 has a site address), note addresses on the site, bug programs and tags, and the ids of applied phone
 entries with any error. It never contains file paths, working directories, diffs, pause notes or full
-command lines. An item from a file outside `notes_dir` is shown as `item #12`. `pm` only reads the
+command lines. With `versus_url` set, it also carries the scoreboard from the last sync (the players'
+names and numbers). An item from a file outside `notes_dir` is shown as `item #12`. `pm` only reads the
 site's backup (for the study clock) and never writes to it.
 
 Credentials come from `~/.netrc`, which must be readable only by you:
@@ -1342,6 +1367,109 @@ machine your-site.pages.dev login USER password PASS
 ```
 chmod 600 ~/.netrc
 ```
+
+## Versus: studying against friends
+
+Versus turns a day of studying into a small contest. Every player's `pm` sends a card to one notes site,
+the **hub**, and fetches everyone else's. Each `pm` then scores the days itself, the same way everywhere.
+A card holds numbers per day and nothing else: no task titles, topic names or file names.
+
+### Joining
+
+Someone runs the hub (their notes site) and gives you its address and a login. Then:
+
+```
+pm set versus_url https://the-hub.pages.dev
+```
+
+and add the login to `~/.netrc`, on its own line (your own notes site, if you have one, keeps its line):
+
+```
+machine the-hub.pages.dev login sam password PASS
+```
+
+The login's user name (`sam`) is your name on the board. You don't need a notes site of your own. The
+setup guides have the steps for joining and for hosting:
+[SETUP-linux.md](../SETUP-linux.md#11-join-a-scoreboard), [SETUP-mac.md](../SETUP-mac.md#11-join-a-scoreboard).
+
+### Reading the board
+
+```
+$ pm versus --sync
+versus · 2026-11-13 (live)
+                         you     sam
+minutes studied          185     140  you
+reviews done              42      60  sam
+quiz answers right        18      18
+test answers right         9       0  you
+syllabus gained         +2.1    -0.4  you
+today: you 3 · sam 1
+wins: you 1 · sam 0 · draws 1
+```
+
+The table is today so far, with whoever leads a row at its end (nobody when it is tied, as with the
+quiz answers here). `today:` is the points so far, `wins:` the days each player has won, and a
+`streak:` line (`streak: you, 3 days`) appears when somebody won the last final days in a row. Alone on
+the board, it ends with `waiting for another player`.
+
+`pm versus` without `--sync` prints the last board without going online. The daemon syncs once an
+hour, so `--sync` is only for when you want it now.
+
+### What counts
+
+| Category | What it counts, per day |
+|---|---|
+| minutes studied | time on the timer (`pm start` / `pm stop`) and time logged with `pm log`; a session counts on the day it started |
+| reviews done | review grades, right or wrong |
+| quiz answers right | right answers that are neither reviews nor tests: practice problems, spot cards, LearnHarness quizzes and practice |
+| test answers right | right answers in mock tests (`pm mock`), on the day the test was finished |
+| syllabus gained | the change in your average topic mastery since the last day it was recorded |
+
+Half marks don't count as right. The syllabus level is recorded each time your `pm` builds its card (at
+each sync), so a day's gain is measured from one sync to another. It can go down: memory fades between
+reviews, and a new topic starts at 0% mastery, so adding one lowers the average that day. Your first
+recorded day gains 0.
+
+### How a day is won
+
+Each category gives one point to the one player ahead in it, if that player has more than 0. A tie at
+the top gives nobody the point. The player with the most points wins the day. A day without a sole
+winner is a draw if anybody studied, and is not counted at all if nobody did.
+
+Skipping a day costs you. A final day on which you studied 30 minutes or less is a penalty day, for each
+player it applies to (both of you, if neither studied). Your overall **score** goes up by one for
+each day you win and down by one for each penalty day. It never goes below zero: a penalty day at zero
+costs nothing more. Only minutes count here: reviews or quizzes done in under 30 minutes of
+timed work still leave the day a penalty day, so start the timer (`pm start`) or log the time (`pm log`).
+
+Today is always live. A day becomes **final** once every player's `pm` has synced after it ended (after
+their midnight). Only final days go into the wins, the draws and the streak. The tally starts at the
+first day on which every player had started, and covers up to 400 days.
+
+It is an honour system. The board shows what each `pm` sends.
+
+### In the app and on the site
+
+The app's **Versus** screen (`v`) shows today so far as a table (a ★ marks the row's leader), the
+points, who leads today, days won and draws, the streak, the last 14 final days, and when each friend
+last synced. **Sync now** syncs at once. With `versus_url` empty it says the scoreboard is off and links
+to Settings.
+
+With `notes_url` set, the hourly push to your own site carries the board too (the sync runs just before
+it), and your site's home page shows a **Versus** box under the Planner box. A friend's notes site needs
+no change to play; updating it only adds that box.
+
+### Questions
+
+- **My friend's day is missing from the wins.** It isn't final until their `pm` syncs after their
+  midnight, so a laptop that stayed shut holds the day open. The app shows when each friend last synced.
+- **The sync fails.** The daemon logs `versus failed: …` and tries again an hour later; `pm versus --sync`
+  prints the same reason as an error. `HTTP 401 (check ~/.netrc)` means the login line is missing or
+  wrong for that host.
+- **A new friend joined and the tally changed.** The tally counts from the first day every player had
+  started, so a new player moves that day for everyone.
+- **Days are local.** Each `pm` counts days in its own time zone.
+- **To stop playing:** `pm set versus_url ""`. The site keeps your last card.
 
 ## Settings
 
@@ -1362,6 +1490,7 @@ their values, and `pm set KEY` shows one. An empty value clears a text setting: 
 | `agent_daily_calls` | `0` | Model calls the background jobs may make a day (0–500); `0` is off. |
 | `new_per_day` | `10` | At most this many never-reviewed items enter the review queue in a day (1–200); the rest wait. |
 | `lh_dir` | *(empty)* | LearnHarness's data folder, the one holding `chats/`. Empty means `~/.config/LearnHarness/data`. `pm` only reads it. |
+| `versus_url` | *(empty)* | `https://…` of the scoreboard's hub site (yours or a friend's); empty turns it off. See [Versus](#versus-studying-against-friends). |
 
 ### Settings in the app
 
@@ -1399,7 +1528,9 @@ What you can't: a review grade once given, and time once logged. Both feed what 
 you, so there is no edit for them; the next reviews and tasks even a slip out.
 
 To stop the background parts: `systemctl --user disable --now pm-watch` (and `pm-ui`), and delete
-`~/.config/systemd/user/pm-watch.service` to remove the unit. Model jobs are off while
+`~/.config/systemd/user/pm-watch.service` to remove the unit. On macOS: `launchctl unload -w` with
+the agent's path (`~/Library/LaunchAgents/dev.prod-max.pm-watch.plist`, and `pm-ui`), then delete the
+file. Model jobs are off while
 `agent_daily_calls` is `0`, and no model is called at all while `llm_cmd` is empty.
 
 ## Trying things safely
@@ -1597,7 +1728,8 @@ Weekly: check `pm bias` (are estimates getting better?), `pm study calib` (overc
 | No fix diff in `pm bug N` | The folder isn't a git repo, or `git` isn't installed. |
 | `pm find` finds nothing | The daemon hasn't indexed yet. Run `pm watch --once`, and check `watch` and `watch_ignore`. |
 | PDF text not found | Install `pdftotext` (poppler); for scans also `pdftoppm` + `tesseract`. |
-| No desktop nudges | The daemon isn't running (`pm doctor` says), `notify-send` is missing, or it's outside `nudge_hours`. |
+| No desktop nudges | The daemon isn't running (`pm doctor` says), `notify-send` is missing (Linux), or it's outside `nudge_hours`. |
+| `versus failed: …` in the daemon log | The scoreboard sync failed; it tries again in an hour. See [Versus](#versus-studying-against-friends). |
 | `error: the database is busy` | Another `pm` (the daemon or the app) was writing at that moment. Run the command again. |
 | `give a unit: 90m or 90h` | Durations need `m` or `h`. |
 | The daemon log says `tick failed: …` | One file or reply upset it; it carries on and tries its hourly work again in an hour. The line names the cause. |

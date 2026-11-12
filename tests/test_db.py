@@ -13,7 +13,7 @@ class TestDb(unittest.TestCase):
     def test_schema_and_settings(self):
         conn = connect(":memory:")
         self.addCleanup(conn.close)
-        self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 13)
+        self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 14)
         self.assertEqual(get_setting(conn, "hours_per_day", "4"), "4")
         set_setting(conn, "hours_per_day", "5")
         self.assertEqual(get_setting(conn, "hours_per_day", "4"), "5")
@@ -74,7 +74,7 @@ class TestDb(unittest.TestCase):
                 conn = connect(path)
                 rows = [tuple(r) for r in conn.execute("SELECT topic_id, path, sections FROM topic_files")]
                 self.assertEqual(rows, [(1, "/n/os.md", None)])
-                self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 13)
+                self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 14)
                 conn.close()
 
     def test_exam_tables(self):

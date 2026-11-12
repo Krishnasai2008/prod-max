@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from pm import agent, lh, llm
+from pm import agent, lh, llm, versus
 from pm.db import SEEN, connect, get_setting, set_setting
 from pm.files import scan
 from pm.inbox import UNPUSHED, apply as apply_inbox
@@ -99,6 +99,16 @@ def tick(conn, now: datetime, last_hourly: datetime | None,
                 message = str(error)
                 lines.append(message if message.startswith("pull failed:")
                              else f"pull failed: {message}")
+        hub = get_setting(conn, "versus_url", "")
+        if hub:  # before the push, so the site gets the fresh board
+            try:
+                players = versus.sync(conn, now, hub, netrc_path)
+            except ValueError as error:
+                message = str(error)
+                lines.append(message if message.startswith("versus failed:")
+                             else f"versus failed: {message}")
+            else:
+                lines.append(f"versus: {players} player{'' if players == 1 else 's'}")
         last_hourly = now
     # UNPUSHED: apply set it with the entry; a failed push leaves it, so the next inbox check (not the next tick) pushes again
     if url and (hourly or (checking and get_setting(conn, UNPUSHED, "") == "1")):

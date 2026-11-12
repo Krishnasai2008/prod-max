@@ -58,7 +58,7 @@ test("relTime counts minutes, hours, days and 30-day months", () => {
 });
 
 test("routeOf falls back to today", () => {
-  assert.deepEqual(ROUTES, ["today", "tasks", "review", "study", "risk", "stats", "bugs", "files", "settings", "spot", "exam", "practice"]);
+  assert.deepEqual(ROUTES, ["today", "tasks", "review", "study", "risk", "stats", "bugs", "files", "settings", "spot", "exam", "practice", "versus"]);
   assert.equal(routeOf("#/tasks"), "tasks");
   assert.equal(routeOf("#/review"), "review");
   assert.equal(routeOf("#/study"), "study");

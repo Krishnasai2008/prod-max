@@ -844,3 +844,18 @@ html { scroll-behavior: smooth; }
 .md-typeset .plan-msg:empty { display: none; }
 @media (hover: none) { .md-typeset .plan-app { display: none; } }  /* the pm app runs on the laptop, not the phone */
 .md-typeset ul.plan-failed > li { color: var(--c-accent); }
+
+/* Home page Versus box (javascripts/pmversus.js): the Planner box's look, the table scrolls inside its own box */
+.md-typeset details.study-versus { margin: 0 0 1.4rem; border: 1px solid var(--c-border); border-radius: 12px;
+  background: var(--c-surface); box-shadow: none; font-size: inherit; }
+.md-typeset details.study-versus > summary { background: none; font-family: "Source Serif 4", serif; font-size: 0.95rem; font-weight: 600; }
+.md-typeset details.study-versus > summary::before { background-color: var(--c-accent); }
+.md-typeset details.study-versus > summary small { margin-left: 0.5em; font: 400 0.7rem var(--md-text-font-family, sans-serif); color: var(--c-muted); }
+.md-typeset details.study-versus > :last-child { margin-bottom: 0.8rem; }
+.md-typeset .versus-wrap { overflow-x: auto; }
+.md-typeset .versus-wrap table { margin: 0.2rem 0 0.4rem; font-size: 0.7rem; }
+.md-typeset .versus-wrap td:not(:first-child), .md-typeset .versus-wrap th { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.md-typeset td.versus-lead { color: var(--c-accent); }
+.md-typeset ul.versus-recent { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; margin: 0.2rem 0 0.6rem; padding: 0; list-style: none; font-size: 0.7rem; }
+.md-typeset ul.versus-recent > li { margin: 0; }
+.md-typeset ul.versus-recent span { color: var(--c-muted); }

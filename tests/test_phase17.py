@@ -253,7 +253,7 @@ class TestEveryday(CliCase):
         code, out = self.pm("set")
         self.assertEqual(code, 0)
         self.assertEqual(out.splitlines()[:2], ["hours_per_day = 4", "peak = 09-12"])
-        self.assertEqual(len(out.splitlines()), 12)
+        self.assertEqual(len(out.splitlines()), 13)
         self.pm("set", "peak", "10-13")
         self.assertEqual(self.pm("set", "peak"), (0, "peak = 10-13\n"))
         self.assertEqual(self.pm("set", "nope")[0], 1)

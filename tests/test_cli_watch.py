@@ -1,5 +1,6 @@
 import json
 import os
+import plistlib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -60,6 +61,21 @@ class TestCliWatch(CliCase):
         self.assertIn("wrote", out)
         self.assertIn("start it: systemctl --user daemon-reload &&"
                       " systemctl --user enable --now pm-watch", out)
+
+    def test_install_on_a_mac_writes_a_launch_agent(self):
+        with mock.patch("pm.cli.shutil.which", return_value="/x/pm"), \
+                mock.patch("pm.cli.sys.platform", "darwin"), \
+                mock.patch("pm.cli.Path.home", return_value=self.home):
+            code, out = self.pm("watch", "--install")
+        self.assertEqual(code, 0)
+        path = self.home / "Library/LaunchAgents/dev.prod-max.pm-watch.plist"
+        with path.open("rb") as f:
+            agent = plistlib.load(f)
+        self.assertEqual(agent["ProgramArguments"], ["/x/pm", "watch"])
+        self.assertEqual(agent["Label"], "dev.prod-max.pm-watch")
+        self.assertTrue(agent["RunAtLoad"] and agent["KeepAlive"])
+        self.assertTrue(out.endswith(f"start it: launchctl load -w {path}\n"))
+        self.assertFalse((self.config / "systemd").exists())
 
     def test_install_needs_pm_on_path(self):
         with mock.patch("pm.cli.shutil.which", return_value=None):

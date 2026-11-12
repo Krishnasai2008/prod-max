@@ -1,0 +1,35 @@
+.versus-wrap {
+  overflow-x: auto;
+}
+
+.versus-table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.versus-table th,
+.versus-table td {
+  padding: 0.35em 0.9em;
+  border-bottom: 1px solid var(--c-border);
+  text-align: right;
+}
+
+.versus-table th[scope="row"],
+.versus-table thead th:first-child {
+  text-align: left;
+  font-weight: normal;
+}
+
+.versus-lead {
+  color: var(--c-lv-green);
+}
+
+.versus-points td,
+.versus-points th {
+  border-bottom: 0;
+}
+
+.versus-recent {
+  list-style: none;
+  padding: 0;
+}

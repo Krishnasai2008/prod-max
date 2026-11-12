@@ -5,6 +5,7 @@ import stat
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -239,14 +240,15 @@ def _file_path(conn, file_id: int) -> Path:
 
 
 def launch(target: str) -> None:
-    xdg = shutil.which("xdg-open")
-    if xdg is None:
-        raise ValueError("xdg-open is not installed")
+    name = "open" if sys.platform == "darwin" else "xdg-open"
+    exe = shutil.which(name)
+    if exe is None:
+        raise ValueError(f"{name} is not installed")
     try:
-        subprocess.Popen([xdg, target], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        subprocess.Popen([exe, target], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, start_new_session=True)
     except (OSError, RuntimeError) as e:
-        raise ValueError(f"couldn't start xdg-open: {e}") from None
+        raise ValueError(f"couldn't start {name}: {e}") from None
 
 
 def _launch(target: str, opener: Callable[[str], None] | None) -> None:
