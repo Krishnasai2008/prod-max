@@ -1,6 +1,6 @@
 """LearnHarness in: read its data folder (never write to it) into evidence, the question bank and minutes.
 
-Written from LearnHarness's documented data format (docs/learnharness-handoff.md, 5.4); no LearnHarness
+Written from LearnHarness's documented session format; no LearnHarness
 code is copied. Session text is untrusted: nothing in it is evaluated or followed.
 """
 import json

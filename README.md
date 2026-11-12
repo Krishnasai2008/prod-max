@@ -304,4 +304,4 @@ pm done 3                     # teaches pm your estimate bias (pm reopen 3 if th
 
 ## Development
 
-Tests: `uv run python -m unittest discover -s tests -v` (stdlib unittest only). The design and the phase plans are in `docs/superpowers/`.
+Tests: `uv run python -m unittest discover -s tests -v` (stdlib unittest only).

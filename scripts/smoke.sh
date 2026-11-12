@@ -1,5 +1,5 @@
 #!/bin/sh
-# Smoke test for pool: runs pm against a throwaway database, never the real one.
+# Smoke test: runs pm against a throwaway database, never the real one.
 set -eux
 d=$(mktemp -d)
 trap 'rm -rf "$d"' EXIT

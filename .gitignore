@@ -12,3 +12,7 @@ opencode.json
 .claude/
 .superpowers/
 global-sync.sh
+# development history: kept locally, not published
+docs/superpowers/
+docs/learnharness-handoff.md
+docs/problem-synthesizer.md

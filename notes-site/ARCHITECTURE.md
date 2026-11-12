@@ -32,7 +32,7 @@ Live URL: whatever you set as `site_url` in `mkdocs.yml`.
 ## 2. Repository layout
 
 ```
-my-notes/
+notes-site/
 ├── mkdocs.yml            # site config: theme, Markdown extensions, plugins, which JS/CSS to load
 ├── build.sh              # the Cloudflare Pages build (see §4)
 ├── pagefind.yml          # what Pagefind indexes
