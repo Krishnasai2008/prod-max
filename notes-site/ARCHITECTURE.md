@@ -195,7 +195,7 @@ matters:
 | 4 | `study.js` | Done ticks, progress bars, continue-reading, reading time, Focus mode, keyboard shortcuts, practice mode. Defines globals `load`, `save`, `doneSet`, `bar` | `search.js` (anchors the Focus button next to `.study-search-btn`) |
 | 5 | `today.js` | To-do list, study clock and Pomodoro, stats and heatmap, "+ Today" button. Defines `heatCells(msOf, now)` and `streakOf(msOf, now)` | `study.js` globals |
 | 6 | `pmstats.js` | The stats page: fetches `/api/pm` and draws it next to `study.time` (a day = the larger of the two clocks, never the sum). Defines `txt`, `pct`, `mins`, `hint`, `days` | `study.js` + `today.js` globals |
-| 7 | `pmhome.js` | The home page's Planner box: fetches `/api/pm` (today's plan, reviews due with links to their notes) and sends tasks and time to `/api/pm-inbox`. No pm data → the box is removed. Its top-level names start with `plan` or `pmHome` | `study.js` + `today.js` + `pmstats.js` globals |
+| 7 | `pmhome.js` | The home page's Planner box: fetches `/api/pm` (today's plan, reviews due with links to their notes) and sends tasks and time to `/api/pm-inbox`. It ends with a plain link to the laptop's `pm ui` (`http://127.0.0.1:8321/`, hidden on touch screens); the site never fetches from it. No pm data → the box is removed. Its top-level names start with `plan` or `pmHome` | `study.js` + `today.js` + `pmstats.js` globals |
 
 **The page hook pattern used everywhere.** The header persists across instant navigation, so header widgets are
 created once, guarded by an "already exists" check. Page widgets are rebuilt on every `document$` emission.

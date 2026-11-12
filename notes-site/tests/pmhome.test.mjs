@@ -47,7 +47,7 @@ test("titles are text, never HTML, in the plan and the due list", () => {
 test("only same-site addresses become links", () => {
   const html = planHtml(PM, NOW);
   assert.ok(html.includes('<a href="/os/paging/#tlb">TLB</a>'));
-  assert.equal((html.match(/<a /g) ?? []).length, 1);
+  assert.equal((html.match(/<a /g) ?? []).length, 2);  // TLB and the pm app link
   assert.ok(!html.includes("javascript:") && !html.includes("//evil"));
 });
 
@@ -170,6 +170,10 @@ test("planEntryText", () => {
   assert.equal(planEntryText({ op: "add", title: "<b>x</b>", est: "1h" }), 'add "&#60;b&#62;x&#60;/b&#62;" (1h)');
   assert.equal(planEntryText({ op: "log", task: 3, duration: "45m" }), "log 45m on #3");
   assert.equal(planEntryText({ op: "done", task: 3 }), "finish #3");
+});
+
+test("the box links to the local pm app, in a new tab", () => {
+  assert.ok(planHtml(PM, NOW).includes('<a href="http://127.0.0.1:8321/" target="_blank" rel="noopener">Open the pm app</a>'));
 });
 
 test("planHtml draws the form, the item buttons and both pending lists", () => {

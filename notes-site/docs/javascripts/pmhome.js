@@ -9,6 +9,8 @@ const PLAN_MAX = 100, PLAN_WAIT_MAX = 50;
 const PLAN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const PLAN_OFFLINE = "Saved on this device; it will be sent next time the page loads.";
 const PLAN_FULL = "Wait until your laptop picks up what's waiting, then reload.";
+// shortcut: pm ui's default port, so the link misses a pm ui started with --port; push the port in /api/pm if that's needed
+const PLAN_APP = "http://127.0.0.1:8321/";  // pm ui on this computer; hidden on touch screens (extra.css)
 
 const planAgo = age => age < 60e3 ? "just now" : age < 48 * H ? fmt(age) + " ago" : days(Math.floor(age / (24 * H))) + " ago";
 const planDate = iso => { const [, m, d] = String(iso).split("-").map(Number); return PLAN_MONTHS[m - 1] ? `${d} ${PLAN_MONTHS[m - 1]}` : txt(iso); };
@@ -126,6 +128,7 @@ function planHtml(pm, now, local = [], msg = "") {
   if (waiting.length) html += `<ul class="plan-pending">` + waiting.map(e => `<li>Waiting for your laptop: ${planEntryText(e)}</li>`).join("") + `</ul>`;
   if (failed.length) html += `<ul class="plan-pending plan-failed">` + failed.map(e =>
     `<li>Your laptop said: ${txt(e.error)} <button type="button" class="plan-btn" data-plan="dismiss" data-id="${txt(e.id)}">dismiss</button></li>`).join("") + `</ul>`;
+  html += `<p class="plan-app study-hint"><a href="${PLAN_APP}" target="_blank" rel="noopener">Open the pm app</a> (on the laptop, while pm ui runs)</p>`;
   return html;
 }
 

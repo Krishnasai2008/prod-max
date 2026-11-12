@@ -842,4 +842,5 @@ html { scroll-behavior: smooth; }
 .md-typeset .plan-btn:hover:not(:disabled) { border-color: var(--c-accent); }
 .md-typeset :is(.plan-btn, form.plan-form input):disabled { opacity: 0.5; cursor: not-allowed; }
 .md-typeset .plan-msg:empty { display: none; }
+@media (hover: none) { .md-typeset .plan-app { display: none; } }  /* the pm app runs on the laptop, not the phone */
 .md-typeset ul.plan-failed > li { color: var(--c-accent); }
