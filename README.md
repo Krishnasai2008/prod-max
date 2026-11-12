@@ -1,6 +1,6 @@
 # pm — a planner that learns how long things really take
 
-`pm` is a local, single-user command-line planner (for a walk-through with explanations and a worked example, see [docs/usage-guide.md](docs/usage-guide.md)). It does six things:
+`pm` is a local, single-user command-line planner (new here? start with [docs/quick-start.md](docs/quick-start.md); for a walk-through with explanations and a worked example, see [docs/usage-guide.md](docs/usage-guide.md); for the browser app screen by screen, [docs/app-guide.md](docs/app-guide.md)). It does six things:
 
 - **Time tracking.** It learns how far off your time estimates are.
 - **Deadline risk.** It simulates the chance that each deadline slips and tells you when to start.

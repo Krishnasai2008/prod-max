@@ -3,6 +3,11 @@
 This guide explains what each part of `pm` does, why it works the way it does, and how to fit it into
 your week. `README.md` is the short reference (every command and flag in a table); this guide is the
 long version. A full worked example is at the end ([A typical two days with pm](#a-typical-two-days-with-pm)).
+New to `pm`? Start with the [quick start](quick-start.md).
+
+**About the examples:** the guide follows a student taking operating systems (`os`) and databases
+(`dbms`). Course names, topic names (`scheduling`, `paging`), task titles and file paths such as
+`~/courses/os/notes.md` are made up: put your own in their place.
 
 ## Contents
 
@@ -330,6 +335,7 @@ on purpose: they aren't today's job.
 
 The CLI is quick, but a day has a lot of small clicks in it. `pm ui` starts a local web app that is
 a second front end over the same database. The CLI is unchanged, and you can mix the two freely.
+The [app guide](app-guide.md) goes through every screen, button and key in detail.
 
 ```
 $ pm ui
@@ -1009,7 +1015,10 @@ multiple-choice checks, sets practice problems and keeps flashcards. The two too
 1. Open **Today**. The **study** card lists what is waiting: reviews, spot-the-error cards,
    flashcards ready in LearnHarness, and `tutor next: os / paging`.
 2. Press **Copy opening message** (or **Copy for practice**) and paste it into a new LearnHarness
-   session. From the terminal, `pm learn paging --copy` does the same.
+   session. From the terminal, `pm learn paging --copy` does the same: it prints the message (your
+   exam date, the topic's mastery, recent confident mistakes and your note files, then "check what I
+   know, then teach") and `--copy` also puts it on the clipboard. `--practice` asks for exam-style
+   problems instead of teaching, and `--course` picks the course when two share a topic name.
 3. Study in LearnHarness.
 4. The daemon (`pm watch`) reads the session on its next tick, or press **Sync now** on the Study
    screen, or run `pm lh sync`.
@@ -1092,6 +1101,14 @@ something else checks: code, a second solve, or you. It never grades an answer, 
 work as more than `checked`, and never changes your topics or templates by itself. Everything here
 needs `llm_cmd` (see [Settings](#settings)); without it `pm` works exactly as before.
 
+`llm_cmd` is any command that reads a prompt on standard input and prints the reply. `pm llm` sends
+it your words and prints what comes back, so you can check the setup before anything depends on it:
+
+```
+pm set llm_cmd "my-llm --model small"
+pm llm say hi                 # the model's reply, or an error saying what went wrong
+```
+
 ### What runs in the background, and what it costs
 
 Background jobs are off until you give them a daily budget of model calls:
@@ -1144,7 +1161,8 @@ Retiring a variant lets a new one be made in its place.
 - **Suggestions** (`pm suggest`, or the **suggestions** card on Study): a topic for an untagged
   LearnHarness session, or "os/deadlock needs os/processes". Nothing changes until you accept. A
   suggestion that no longer fits (the session got a topic since, or the prerequisite would make a
-  loop) is closed instead of applied.
+  loop) is closed instead of applied. `pm suggest` lists the open ones with their numbers (or prints
+  `no suggestions`); `pm suggest accept 3` applies number 3 and `pm suggest reject 3` closes it.
 - **Template drafts**: `pm template draft 12` turns numeric question #12 into a formula template in
   `templates/drafts/`. It has to reproduce #12's answer before it is saved at all, but read it
   anyway: check the parameter ranges and constraints make sense, then `pm template check` the file
