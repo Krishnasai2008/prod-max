@@ -113,7 +113,7 @@ test("the notes folder setting has its own label and hint", () => {
   assert.ok(out.includes('<input type="hidden" name="key" value="notes_dir">'));
   assert.ok(
     out.includes(
-      "the docs folder of your notes site, like ~/my-notes/docs; items from it link to the site",
+      "the docs folder of your notes site, like ~/prod-max/notes-site/docs; items from it link to the site",
     ),
   );
 });

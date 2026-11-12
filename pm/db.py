@@ -284,10 +284,10 @@ def put_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
             folder = Path(value).expanduser().resolve()
             is_folder = folder.is_dir()
         except (OSError, RuntimeError):
-            raise ValueError("notes_dir must be a folder, like ~/my-notes/docs") from None
+            raise ValueError("notes_dir must be a folder, like ~/prod-max/notes-site/docs") from None
         if (value != value.strip() or not value.startswith(("/", "~/"))
                 or not is_folder):
-            raise ValueError("notes_dir must be a folder, like ~/my-notes/docs")
+            raise ValueError("notes_dir must be a folder, like ~/prod-max/notes-site/docs")
     if key == "llm_cmd" and value:
         try:
             words = shlex.split(value)

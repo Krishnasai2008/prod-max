@@ -107,7 +107,7 @@ It listens only on `127.0.0.1` and refuses requests from other web sites (it che
 | `watch_ignore` | *(empty)* | Folders under `watch` to skip, `:`-separated, e.g. `~/Downloads/Data`. |
 | `course_codes` | *(empty)* | `name=CODE` pairs separated by `;`, e.g. `os=CS F372;dbms=CS F212`. Used to tag files by course (see `find`). |
 | `notes_url` | *(empty)* | Your notes site, `https://…`, for `stats --push` and `inbox`. |
-| `notes_dir` | *(empty)* | The site's `docs` folder, e.g. `~/my-notes/docs`. Review items from notes in it link to their page on the site (`/os/paging/#tlb`), in the push and as **open on the site** in the app's Review screen. |
+| `notes_dir` | *(empty)* | The site's `docs` folder, e.g. `~/prod-max/notes-site/docs`. Review items from notes in it link to their page on the site (`/os/paging/#tlb`), in the push and as **open on the site** in the app's Review screen. |
 | `llm_cmd` | *(empty)* | A command that reads a prompt on stdin and prints the reply, e.g. `my-llm --model small`. It is run directly, never through a shell, with a 2-minute limit (past it, the command and anything it started are stopped). Only `pm llm`, `pm spot --make` and the model jobs (below) use it, and nothing else needs it. |
 | `new_per_day` | `10` | At most this many never-reviewed items enter the review queue each day (1–200); the rest wait. |
 | `lh_dir` | *(empty)* | LearnHarness's data folder (the one that holds `chats/`). Empty means `~/.config/LearnHarness/data`. `pm` only reads it. |
@@ -246,7 +246,7 @@ What gets indexed:
 - **Timing:** a file is picked up once it hasn't changed for 10s. Deleted files drop out of the index.
 - **Scanned PDFs:** a PDF with under 100 characters of text is treated as a scan, and its first 10 pages are OCR'd (a few seconds a page). Pages after 10 are found by name only.
 
-Course tags: a file gets a course if any `course_codes` code appears in its name or in the first 3000 characters of its text (spaces, `_` and `-` are ignored). A file also gets a course if a course name is a whole word in its file name. Course names come from your tasks, topics and `course_codes`. Otherwise the course is the file's top folder under the watched root (`~/my-notes/docs/ai-ml/…/x.md` is `ai-ml`). Files directly in the root get no course. Files are retagged automatically when any of these, or `watch`, change.
+Course tags: a file gets a course if any `course_codes` code appears in its name or in the first 3000 characters of its text (spaces, `_` and `-` are ignored). A file also gets a course if a course name is a whole word in its file name. Course names come from your tasks, topics and `course_codes`. Otherwise the course is the file's top folder under the watched root (`~/prod-max/notes-site/docs/ai-ml/…/x.md` is `ai-ml`). Files directly in the root get no course. Files are retagged automatically when any of these, or `watch`, change.
 
 Nudges: once per task per day, within `nudge_hours`, for any task whose start-by date has arrived and that you haven't worked on today. The message is "start #N … today" or "behind on #N …".
 
@@ -304,4 +304,4 @@ pm done 3                     # teaches pm your estimate bias (pm reopen 3 if th
 
 ## Development
 
-Tests: `uv run python -m unittest discover -s tests -v` (stdlib unittest only). The design and the phase plans are in `docs/superpowers/`. The contributor conventions are in `AGENTS.md`.
+Tests: `uv run python -m unittest discover -s tests -v` (stdlib unittest only). The design and the phase plans are in `docs/superpowers/`.

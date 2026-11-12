@@ -308,14 +308,14 @@ class TestDb(unittest.TestCase):
             os.chdir(d)
             try:
                 with self.assertRaisesRegex(
-                        ValueError, "notes_dir must be a folder, like ~/my-notes/docs"):
+                        ValueError, "notes_dir must be a folder, like ~/prod-max/notes-site/docs"):
                     put_setting(conn, "notes_dir", "docs")
             finally:
                 os.chdir(old)
         for value in ("/nope/x", " /tmp", "/tmp ", "~nosuchuser_zz/x"):
             with self.subTest(value=value):
                 with self.assertRaisesRegex(
-                        ValueError, "notes_dir must be a folder, like ~/my-notes/docs"):
+                        ValueError, "notes_dir must be a folder, like ~/prod-max/notes-site/docs"):
                     put_setting(conn, "notes_dir", value)
         put_setting(conn, "notes_dir", "")
         self.assertEqual(get_setting(conn, "notes_dir", "x"), "")

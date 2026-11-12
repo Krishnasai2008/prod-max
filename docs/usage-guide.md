@@ -765,7 +765,7 @@ Reviews ask "do you remember it?". A test asks "can you do it, now, against the 
 From your notes: any section with an `**Answer**` paragraph is already a question.
 
 ```
-pm q import ~/my-notes/docs/os/paging.md --topic paging
+pm q import ~/prod-max/notes-site/docs/os/paging.md --topic paging
 added 6 questions to paging
 ```
 
@@ -1012,7 +1012,7 @@ From my planner: mastery 52%. Memory 81%, understanding 67%, no practice yet. I 
 Recent answers I got wrong while being confident:
 - notes.md#TLB (I said 90%)
 My notes for this topic:
-- /home/u/my-notes/docs/os/paging.md
+- /home/u/prod-max/notes-site/docs/os/paging.md
 Please check what I already know first, then teach what is missing.
 ```
 
@@ -1279,6 +1279,9 @@ When the daemon runs, it sends a desktop notification (with `notify-send`) for a
 
 ## The notes site
 
+The site itself is in `notes-site/`; [its README](../notes-site/README.md) says how to put your own copy
+online and connect `pm` to it.
+
 ```
 pm stats             # everything as JSON
 pm stats --push      # send it to your notes site
@@ -1304,7 +1307,7 @@ Set `notes_dir` to your site's `docs` folder and every review item from a note t
 at the heading when the item is a heading:
 
 ```
-pm set notes_dir ~/my-notes/docs
+pm set notes_dir ~/prod-max/notes-site/docs
 ```
 
 The app's Review screen then also shows **open on the site** after you reveal the answer.
@@ -1354,7 +1357,7 @@ their values, and `pm set KEY` shows one. An empty value clears a text setting: 
 | `watch_ignore` | *(empty)* | Folders under `watch` to skip, `:`-separated. |
 | `course_codes` | *(empty)* | `name=CODE` pairs separated by `;`, for course tags. |
 | `notes_url` | *(empty)* | `https://…` of your notes site, for `stats --push`. |
-| `notes_dir` | *(empty)* | The site's `docs` folder, e.g. `~/my-notes/docs`, so review items link to their page on the site. |
+| `notes_dir` | *(empty)* | The site's `docs` folder, e.g. `~/prod-max/notes-site/docs`, so review items link to their page on the site. |
 | `llm_cmd` | *(empty)* | A command that reads a prompt and prints a reply. Only the model features use it; see [Letting a model help](#letting-a-model-help). |
 | `agent_daily_calls` | `0` | Model calls the background jobs may make a day (0–500); `0` is off. |
 | `new_per_day` | `10` | At most this many never-reviewed items enter the review queue in a day (1–200); the rest wait. |

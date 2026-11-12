@@ -12,7 +12,7 @@ const FIELDS = {
   agent_daily_calls: ["Model calls a day", "how many times the background jobs may call the language model each day; 0 turns them off"],
   lh_dir: ["LearnHarness data folder", "leave empty to use ~/.config/LearnHarness/data; pm only reads it"],
   llm_cmd: ["Language model command", "a command that reads a prompt on stdin and prints the reply; used for spot-the-error"],
-  notes_dir: ["Notes folder", "the docs folder of your notes site, like ~/my-notes/docs; items from it link to the site"],
+  notes_dir: ["Notes folder", "the docs folder of your notes site, like ~/prod-max/notes-site/docs; items from it link to the site"],
 };
 
 export async function load(ctx) {

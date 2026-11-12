@@ -11,3 +11,4 @@ opencode.json
 .agents/
 .claude/
 .superpowers/
+global-sync.sh
