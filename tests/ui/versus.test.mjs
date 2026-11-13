@@ -155,3 +155,15 @@ test("each player's study streak is shown when the board has it", () => {
   assert.ok(out.includes('<p class="study-hint">2h+ days in a row: you 4 · sam 0.</p>'));
   assert.ok(!html(STATE, on(BOARD)).includes("days in a row:"));  // a board from before the key
 });
+
+test("sync says whether the notes site got the new board", async () => {
+  const run = async (reply) => {
+    const toasts = [];
+    await actions.sync({}, { api: async () => reply, toast: (t) => toasts.push(t) });
+    return toasts[0];
+  };
+  assert.equal(await run({ on: true, board: null, site: "" }), "synced");
+  assert.equal(await run({ on: true, board: null, site: "updated" }), "synced, site updated");
+  assert.equal(await run({ on: true, board: null, site: "push failed: HTTP 500" }), "synced, but the site was not updated: push failed: HTTP 500");
+  assert.equal(await run(undefined), "synced");
+});

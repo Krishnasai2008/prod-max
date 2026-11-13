@@ -1225,7 +1225,25 @@ class TestApiVersus(ApiCase):
             code, data = self.call("POST", "/api/versus/sync")
         self.assertEqual(code, 200)
         self.assertEqual((data["on"], data["board"]["you"], data["board"]["tally"]), (True, "kel", {"kel": 1, "sam": 0}))
-        self.assertEqual(self.call("GET", "/api/versus")[1], data)
+        self.assertEqual(self.call("GET", "/api/versus")[1], {k: v for k, v in data.items() if k != "site"})
+
+    def test_sync_also_sends_the_fresh_board_to_the_notes_site(self):
+        set_setting(self.c, "versus_url", "https://hub.dev")
+
+        def fake(conn, now, url, netrc_path=None):
+            set_setting(conn, "versus_cards", json.dumps(self.REPLY))
+
+        with mock.patch("pm.api.versus.sync", side_effect=fake), mock.patch("pm.api.stats.push") as push:
+            self.assertEqual(self.call("POST", "/api/versus/sync")[1]["site"], "")  # no notes site: nothing to send
+            push.assert_not_called()
+            set_setting(self.c, "notes_url", "https://x.dev")
+            self.assertEqual(self.call("POST", "/api/versus/sync")[1]["site"], "updated")
+            summary, url = push.call_args.args[:2]
+            self.assertEqual((url, summary["versus"]["players"]), ("https://x.dev", ["kel", "sam"]))
+            push.side_effect = ValueError("push failed: HTTP 500")
+            code, data = self.call("POST", "/api/versus/sync")  # the sync itself worked: still a 200 with the board
+            self.assertEqual((code, data["site"], data["board"]["you"]), (200, "push failed: HTTP 500", "kel"))
+        self.assertNotIn("site", self.call("GET", "/api/versus")[1])
 
     def test_a_failed_sync_is_a_400_and_keeps_the_old_board(self):
         set_setting(self.c, "versus_url", "https://hub.dev")

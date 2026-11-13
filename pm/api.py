@@ -1098,8 +1098,18 @@ def _versus_sync(conn, now: datetime) -> dict:
     if not url:
         raise ValueError("set the scoreboard address in Settings first")
     netrc_path = os.environ.get("PM_NETRC")
-    versus.sync(conn, now, url, Path(netrc_path) if netrc_path else None)
-    return _versus(conn, now)
+    netrc = Path(netrc_path) if netrc_path else None
+    versus.sync(conn, now, url, netrc)
+    # the site's Versus box shows what was last pushed, which the daemon does hourly: send the fresh board now.
+    # site: "" with no notes site, "updated", or why the push failed (the sync itself still worked)
+    site, notes = "", get_setting(conn, "notes_url", "")
+    if notes:
+        try:
+            stats.push(stats.summary_now(conn, now), notes, netrc)
+            site = "updated"
+        except ValueError as error:
+            site = str(error)
+    return {**_versus(conn, now), "site": site}
 
 
 def handle(conn, method: str, path: str, query: dict[str, str], body: dict,

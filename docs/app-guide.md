@@ -672,7 +672,7 @@ Joining also needs a login; see the setup guide, step 11
 - **Recent days**: the last 14 finished days with the winner and the points.
 - when each friend **last synced**. A day counts once everyone has synced after midnight.
 
-**Sync now** sends your numbers and fetches the others' at once. Otherwise that happens once an hour
+**Sync now** sends your numbers and fetches the others' at once, and with a notes site set it also pushes the stats there, so the site's Versus box is up to date. Otherwise that happens once an hour
 while the background service runs.
 
 With only you on the board, it shows your table and `Waiting for another player to sync.`

@@ -105,7 +105,7 @@ export function html(state, extra) {
 
 export const actions = {
   async sync(_data, ctx) {
-    await ctx.api("POST", "/api/versus/sync");
-    ctx.toast("synced");
+    const site = (await ctx.api("POST", "/api/versus/sync"))?.site ?? "";
+    ctx.toast(site === "" ? "synced" : site === "updated" ? "synced, site updated" : `synced, but the site was not updated: ${site}`);
   },
 };

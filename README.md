@@ -306,7 +306,7 @@ How a day is won: there are five categories. Minutes come from timer sessions, `
 
 Joining: `pm set versus_url https://the-hub-site` and a line for that host in `~/.netrc`; your login's user name is your name on the board. The hub owner plays with their normal site login and gives each friend a scoreboard-only login, which opens `/api/versus` and nothing else on the site. Step by step: [SETUP-linux.md](SETUP-linux.md#11-join-a-scoreboard) or [SETUP-mac.md](SETUP-mac.md#11-join-a-scoreboard).
 
-The app's **Versus** screen (`v`) shows the same board with **Sync now**. With `notes_url` set, the push carries the last board too, and your own site's home page shows it in a **Versus** box under the Planner box.
+The app's **Versus** screen (`v`) shows the same board with **Sync now** (which also pushes the stats to your notes site, when `notes_url` is set). With `notes_url` set, the push carries the last board too, and your own site's home page shows it in a **Versus** box under the Planner box.
 
 ## Backup and undo
 

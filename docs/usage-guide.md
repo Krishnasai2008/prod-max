@@ -1491,7 +1491,7 @@ It is an honour system. The board shows what each `pm` sends.
 
 The app's **Versus** screen (`v`) shows today so far as a table (a ★ marks the row's leader), the
 points, who leads today, days won and draws, the streak, the last 14 final days, and when each friend
-last synced. **Sync now** syncs at once. With `versus_url` empty it says the scoreboard is off and links
+last synced. **Sync now** syncs at once and, with `notes_url` set, also pushes the stats so the site's Versus box shows the new board (otherwise the site updates with the hourly push). With `versus_url` empty it says the scoreboard is off and links
 to Settings.
 
 With `notes_url` set, the hourly push to your own site carries the board too (the sync runs just before
