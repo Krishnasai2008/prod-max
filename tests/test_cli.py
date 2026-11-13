@@ -169,8 +169,8 @@ class TestCli(CliCase):
                          (0, "notes_url = https://x.dev\n"))
         self.assertEqual(self.pm("set", "watch", "Downloads"),
                          (1, "error: watch folders must be full paths like ~/Downloads\n"))
-        self.assertEqual(self.pm("set", "watch", "/tmp:~/Downloads"),
-                         (0, "watch = /tmp:~/Downloads\n"))
+        self.assertEqual(self.pm("set", "watch", "/tmp:~/"),  # both exist on any machine: no note
+                         (0, "watch = /tmp:~/\n"))
         self.assertEqual(self.pm("set", "watch_ignore", "Downloads"),
                          (1, "error: watch_ignore folders must be full paths like ~/Downloads\n"))
         self.assertEqual(self.pm("set", "watch_ignore", ""), (0, "watch_ignore = \n"))

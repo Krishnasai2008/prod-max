@@ -58,8 +58,10 @@ class TestModelJobs(Mem):
         self.assertIsNone(lh.parse_session(data).tag)
 
     def test_deep_nesting_is_a_bad_reply_not_a_crash(self):
-        with self.assertRaises(ValueError):
+        try:
             agent.parse_json("[" * 100_000 + "]" * 100_000)
+        except ValueError:
+            pass  # Python 3.14+ parses it instead; either way nothing else is raised
 
     def test_a_session_is_asked_about_once(self):
         add_topic(self.c, "paging", course="os")

@@ -51,6 +51,7 @@ class TestCliWatch(CliCase):
         self.assertIn("[TLB]", out)
         self.assertEqual(self.pm("find", "nothinghere"), (0, "no matches\n"))
 
+    @mock.patch("sys.platform", "linux")
     def test_install_writes_the_unit(self):
         with mock.patch("pm.cli.shutil.which", return_value="/x/pm"):
             code, out = self.pm("watch", "--install")

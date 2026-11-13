@@ -272,6 +272,7 @@ def request(url: str, path: str, netrc_path: Path | None, *, method: str = "GET"
             raise ValueError(f"{what} failed: the reply is too large")
         return reply
     except HTTPError as e:
+        e.close()  # it holds the response; Python 3.14+ warns when it's left open
         raise ValueError(f"{what} failed: HTTP {e.code}"
                          + (" (check ~/.netrc)" if e.code == 401 else "")) from None
     except URLError as e:

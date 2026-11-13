@@ -69,6 +69,7 @@ class TestCliUi(CliCase):
                 self.assertTrue(out.endswith(
                     "error: port 8321 is in use; try pm ui --port 8322\n"))
 
+    @mock.patch("sys.platform", "linux")
     def test_install_writes_the_ui_unit(self):
         config = Path(self.d.name) / "config"
         with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(config)}), \

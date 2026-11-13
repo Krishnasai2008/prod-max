@@ -72,6 +72,7 @@ class TestSend(unittest.TestCase):
         run.assert_not_called()
         self.assertEqual(out.getvalue(), "nudge: hello\n")
 
+    @mock.patch("sys.platform", "linux")
     def test_notify_send_arguments(self):
         with mock.patch("pm.nudge.shutil.which", return_value="/usr/bin/notify-send"), \
                 mock.patch("pm.nudge.subprocess.run") as run, redirect_stdout(io.StringIO()):

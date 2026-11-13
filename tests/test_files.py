@@ -361,6 +361,7 @@ class TestFiles(unittest.TestCase):
                 with self.assertRaisesRegex(LookupError, r"no file #99"):
                     func(self.c, 99)
 
+    @mock.patch("sys.platform", "linux")
     def test_missing_xdg_open_is_refused(self):
         ids = self.index("a.pdf")
         with mock.patch("pm.files.shutil.which", return_value=None):
@@ -394,6 +395,7 @@ class TestFiles(unittest.TestCase):
         which.assert_called_once_with("open")
         self.assertEqual(popen.call_args.args, (["/usr/bin/open", target],))
 
+    @mock.patch("sys.platform", "linux")
     def test_a_failed_launch_is_a_value_error(self):
         ids = self.index("a.pdf")
         for func in (open_file, reveal):
