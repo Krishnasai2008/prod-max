@@ -389,6 +389,17 @@ class TestNotesMinutes(unittest.TestCase):
         save_notes(self.c, {"2026-11-09": 90, "2026-11-08": 15})
         self.assertEqual(notes_minutes(self.c), {"2026-11-08": 15, "2026-11-09": 90})
 
+    def test_a_day_never_goes_down_and_a_day_the_site_stopped_sending_stays(self):
+        # the backup is whichever browser saved last (an older site), or a browser's entry can be put back stale
+        save_notes(self.c, {"2026-11-09": 90, "2026-11-08": 15})
+        save_notes(self.c, {"2026-11-09": 40, "2026-11-07": 5})
+        self.assertEqual(notes_minutes(self.c), {"2026-11-07": 5, "2026-11-08": 15, "2026-11-09": 90})
+        save_notes(self.c, {})
+        self.assertEqual(len(notes_minutes(self.c)), 3)
+        first = date(2025, 1, 1)
+        save_notes(self.c, {(first + timedelta(days=i)).isoformat(): 1 for i in range(500)})
+        self.assertEqual(len(notes_minutes(self.c)), 400)
+
     def test_missing_or_bad_values_are_empty(self):
         self.assertEqual(notes_minutes(self.c), {})
         for value in ("garbage", "[]", '"x"', '{"2026-11-09": "90"}',
@@ -441,6 +452,123 @@ class TestPullSite(unittest.TestCase):
             with self.subTest(bad=bad):
                 spans = json.dumps({"2026-11-09": good, "2026-11-08": bad, "nonsense": good})
                 self.assertEqual(self.pull(spans)[1], {"2026-11-09": good})
+
+
+H = 3_600_000
+
+
+class TestPullDevices(unittest.TestCase):
+    """The backup holds the saver's own log, and under study.devices the other browsers'; pm adds the clocks,
+    counting time they share once."""
+
+    def setUp(self):
+        self.d = tempfile.TemporaryDirectory()
+        self.addCleanup(self.d.cleanup)
+        self.netrc = Path(self.d.name) / "netrc"
+        self.netrc.write_text("machine x.dev login u password p\n")
+        os.chmod(self.netrc, 0o600)
+
+    def pull(self, devices, own=None, saver=None):
+        backup = {"study.done": "[]"}
+        if own is not None:  # the saver's own log, where it has always been
+            ms, spans = own
+            backup["study.time"] = json.dumps({"2026-11-09": {"os": ms}})
+            if spans:
+                backup["study.spans"] = json.dumps({"2026-11-09": spans})
+        if saver is not None:
+            backup["study.saver"] = saver
+        if devices is not None:
+            backup["study.devices"] = devices if isinstance(devices, str) else json.dumps(devices)
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(backup).encode()
+        with mock.patch("pm.stats.urlopen", return_value=response):
+            return pull_site("https://x.dev", self.netrc)
+
+    @staticmethod
+    def dev(ms=None, spans=None, day="2026-11-09"):
+        return {"at": 1, "time": {day: ms} if ms else {}, "spans": {day: spans} if spans else {}}
+
+    def test_two_browsers_at_different_times_add_up(self):
+        got = self.pull({"phone": self.dev(H // 2, [[900, 930]])}, own=(H, [[540, 600]]), saver="laptop")
+        self.assertEqual(got, ({"2026-11-09": 90}, {"2026-11-09": [[540, 600], [900, 930]]}))
+        got = self.pull({"laptop": self.dev(H, [[540, 600]]), "phone": self.dev(H // 2, [[900, 930]])})  # the saver has no clock time
+        self.assertEqual(got[0], {"2026-11-09": 90})
+
+    def test_the_same_minutes_on_two_browsers_count_once(self):
+        got = self.pull({"phone": self.dev(H, [[540, 600]])}, own=(H, [[540, 600]]))  # both open, or a restored copy
+        self.assertEqual(got, ({"2026-11-09": 60}, {"2026-11-09": [[540, 600]]}))
+        got = self.pull({"phone": self.dev(H, [[570, 630]])}, own=(H, [[540, 600]]))
+        self.assertEqual(got, ({"2026-11-09": 90}, {"2026-11-09": [[540, 630]]}))
+
+    def test_a_day_a_browser_has_no_stretches_for_is_the_larger_clock(self):
+        # before the site recorded stretches the two logs may be copies of each other: never their sum
+        self.assertEqual(self.pull({"phone": self.dev(H)}, own=(2 * H, None)), ({"2026-11-09": 120}, {}))
+        got = self.pull({"phone": self.dev(H)}, own=(2 * H, [[540, 660]]))
+        self.assertEqual(got, ({"2026-11-09": 120}, {"2026-11-09": [[540, 660]]}))
+
+    def test_one_browser_is_exactly_its_own_clock(self):
+        # stretches run a little wide (whole minutes, short gaps bridged): they must never add to a lone browser
+        self.assertEqual(self.pull({}, own=(H, [[540, 610]]), saver="laptop"), ({"2026-11-09": 60}, {"2026-11-09": [[540, 610]]}))
+        self.assertEqual(self.pull(None, own=(H, [[540, 610]]))[0], {"2026-11-09": 60})
+        # nor cut it: the day the site began recording has 3h on the clock and stretches for the last 10 minutes
+        self.assertEqual(self.pull({}, own=(3 * H, [[600, 610]]))[0], {"2026-11-09": 180})
+        got = self.pull({"phone": self.dev(H // 6, [[700, 710]])}, own=(3 * H, [[600, 610]]))
+        self.assertEqual(got[0], {"2026-11-09": 180})  # 190 in truth; without full stretches the sum can't be trusted
+
+    def test_the_savers_stale_entry_in_the_list_is_ignored(self):
+        # its own log is the fresh one; the list may still hold what another browser last saw of it
+        got = self.pull({"laptop": self.dev(H // 2, [[540, 570]]), "phone": self.dev(H, [[900, 960]])},
+                        own=(H, [[540, 600]]), saver="laptop")
+        self.assertEqual(got, ({"2026-11-09": 120}, {"2026-11-09": [[540, 600], [900, 960]]}))
+
+    def test_a_browser_on_the_older_script_still_counts_through_its_own_log(self):
+        # an empty phone on the old script restored the laptop's backup, name and list included, then read 60m more:
+        # it keeps sending both back unchanged, with its own log beside them
+        got = self.pull({}, own=(90 * 60_000, None), saver="laptop")
+        self.assertEqual(got[0], {"2026-11-09": 90})
+        got = self.pull({"tablet": self.dev(H // 2)}, own=(90 * 60_000, None), saver="laptop")
+        self.assertEqual(got[0], {"2026-11-09": 90})
+
+    def test_under_a_minute_on_one_browser_does_not_hide_the_other(self):
+        self.assertEqual(self.pull({"phone": self.dev(20_000)}, own=(H, [[540, 600]]))[0], {"2026-11-09": 60})
+
+    def test_an_unusable_list_leaves_the_savers_log_as_before(self):
+        for devices in (None, "not json", "[]", "5", {}, {"a": 5}, {"a": {"time": "x"}}, {"a": {"time": {"2026-11-09": -5}}},
+                        '{"a": {"time": {"2026-11-09": ' + "9" * 5000 + "}}}"):
+            with self.subTest(devices=str(devices)[:40]):
+                self.assertEqual(self.pull(devices, own=(H, None)), ({"2026-11-09": 60}, {}))
+
+    def test_a_bad_day_or_entry_in_the_list_costs_only_itself(self):
+        good = self.dev(H, [[540, 600]])
+        for bad in (5, None, [], {"time": []}, {"time": {"2026-11-09": "x"}}, {"time": {"2026-W45-1": H}},
+                    {"time": {"2026-11-09": True}}, {"time": {"2026-11-09": -1}}):
+            with self.subTest(bad=bad):
+                self.assertEqual(self.pull({"laptop": good, "x": bad})[0], {"2026-11-09": 60})
+        mixed = {"at": 1, "time": {"2026-11-08": H, "junk": H, "2026-11-07": "x", "2026-11-06": 1e999}, "spans": {}}
+        self.assertEqual(self.pull(json.dumps({"laptop": good, "x": mixed}).replace("Infinity", "1e999"))[0],
+                         {"2026-11-08": 60, "2026-11-09": 60})  # the one good day of a damaged entry is kept
+        # bad stretches only cost that browser its stretches for the day, never its minutes
+        got = self.pull({"laptop": good, "phone": {"at": 1, "time": {"2026-11-09": H}, "spans": {"2026-11-09": [[9, 3]]}}})
+        self.assertEqual(got, ({"2026-11-09": 60}, {"2026-11-09": [[540, 600]]}))
+
+    def test_a_day_holds_at_most_24_hours(self):
+        self.assertEqual(self.pull({"phone": self.dev(1e300)})[0], {"2026-11-09": 1440})
+        self.assertEqual(self.pull(None, own=(1e300, None))[0], {"2026-11-09": 1440})
+
+    def test_too_many_browsers_or_days_are_cut_not_fatal(self):
+        many = {f"d{i}": self.dev(H, [[3 * i, 3 * i + 1]]) for i in range(40)}
+        minutes, spans = self.pull(many)
+        self.assertEqual(len(spans["2026-11-09"]), 16)
+        first = date(2025, 1, 1)
+        long = {"at": 1, "time": {(first + timedelta(days=i)).isoformat(): H for i in range(900)}, "spans": {}}
+        self.assertEqual(len(self.pull({"laptop": long})[0]), 400)
+
+    def test_a_day_key_that_is_not_a_date_is_left_out_of_the_savers_log_too(self):
+        backup = {"study.time": json.dumps({"zz": {"os": H}, "2026-W45-1": {"os": H}, "2026-11-09": {"os": H}})}
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(backup).encode()
+        with mock.patch("pm.stats.urlopen", return_value=response):
+            self.assertEqual(pull_site("https://x.dev", self.netrc)[0], {"2026-11-09": 60})
 
 
 class TestSiteClock(unittest.TestCase):

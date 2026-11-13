@@ -259,6 +259,7 @@ Page type is decided in `studyPage()`. A page with `.study-continue` is the home
 | `study.clock` | `{mode: "auto"\|"watch"\|"pomo25"\|"pomo50", start: ms}` | today.js | ✘ live state |
 | `study.tick` | `ms`: last time any tab counted (stops two tabs counting the same time) | today.js | ✘ |
 | `study.active` | `ms`: last user activity, shared across tabs | today.js | ✘ |
+| `study.device` | a random name for this browser, made at its first save | backup.js | ✘ never copied to another browser |
 | `study.pushed` | `{h: hash, at: ms}`: last successful backup | backup.js | ✘ |
 | `study.pminbox` | `[{id, at, op, ...}]`: entries this browser sent to `/api/pm-inbox` that the laptop hasn't acknowledged (failures stay until dismissed) | pmhome.js | ✘ a queue: restoring it would resend entries |
 
@@ -275,6 +276,28 @@ Page type is decided in `studyPage()`. A page with `.study-continue` is the home
   - It never pushes before a successful GET.
   - It never pushes data that has none of the core keys, so an empty browser can't overwrite a good backup.
   - It uses `keepalive` when the body is under 60 KB.
+- **Every browser's clock:** the backup is one copy, whichever browser saved last, and each browser counts its own
+  study time. So each save also writes two keys that live only in the backup, never in `localStorage`:
+  `study.saver` (the saving browser's `study.device`) and `study.devices`, the other browsers' clocks:
+  `{"<study.device>": {at: ms, time: {"YYYY-MM-DD": ms}, spans: {"YYYY-MM-DD": [[start, end], ...]}}}` (day totals
+  for the newest 400 days, and the stretches). The saver's own clock is the backup's `study.time` and `study.spans`,
+  as always, so a lone browser's backup is no bigger than before. pm on the laptop adds the saver's log and the list.
+  - Before an ordinary save it reads the backup again; the browser that saved last becomes an entry, built from the
+    backup's own log (`backupOthers`). If that read fails, it does not save. Requests give up after 20 s, and a save
+    still running after 45 s no longer holds up the next one.
+  - On `pagehide` there is no time to read: it saves at once with the list it last saw. A clock put back stale that
+    way is repaired at that browser's next visit (below), and pm never lets a day's total go down.
+  - Unchanged data is saved again only when the backup, as last read, no longer holds this browser's clock as it is
+    now: another browser saved an older copy of it, or a browser still on the older script saved without the list.
+  - It keeps the 7 other browsers saved most recently and drops one not seen for 400 days.
+  - A restore copies none of `study.device`, `study.saver` and `study.devices`, so a restored browser gets a name of
+    its own. Its copy of the other browser's log is counted once by pm (same stretches), not twice.
+  - A browser still on the older script restores and re-sends `study.saver` and `study.devices` as ordinary keys;
+    its own time still reaches pm through `study.time`. A newer browser's save sets both keys right again, but
+    if the stale `study.saver` was that newer browser's own name, the save takes the other's log for its own and
+    drops it: the backup then goes back and forth between the two, as it did before this list existed, until
+    the older script is replaced. pm keeps the larger number for each day meanwhile.
+  - A browser that will not keep a `study.device` saves without `study.saver`: its log is still read, as nobody's.
 - It also calls `navigator.storage.persist()`.
 
 ### 6.5 Study clock (`today.js`)

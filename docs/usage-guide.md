@@ -1342,6 +1342,13 @@ the site, may not add either; use the timer when you want both counted. A timer 
 midnight is split at midnight here. A day is never less than its LearnHarness tutor minutes.
 The site's own stats page and home page streak use the same number once the daemon has pushed it.
 
+Each browser you read in (laptop, phone) keeps its own clock, and they are added together: an hour on the
+phone and an hour in the laptop browser make two. Minutes two browsers both counted (both open at once)
+count once. This starts on the day each browser first saves with the updated site; for a day before that,
+or one a browser has no recorded stretches for, the day is the larger of the browsers' clocks. The clock
+chip on the site itself still shows that browser's own time. A day's site time in `pm` never goes down:
+once the daemon has read a number for a day, a smaller one later is ignored.
+
 ### The Planner box
 
 The site's home page has a **Planner** box, drawn from the last push: the day meter (time worked

@@ -27,6 +27,8 @@ from pm.today import plan_day
 MAX_REPLY = 5_000_000  # the site caps what it stores at 5 MB; more than that is not our backup
 DAY_KEYS = ("min", "deep", "peak", "reviews", "recalled", "fails", "fixes", "study")  # study: every clock, see combined
 SPAN_DAYS, MAX_SPANS = 400, 300  # days of site stretches pm keeps; the most stretches one day can hold
+MAX_DEVICES = 16  # browsers read from one backup; the site keeps 8
+DAY_MS = 86_400_000  # the most one clock can hold for a day
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -291,16 +293,18 @@ def push(data: dict, url: str, netrc_path: Path | None = None) -> int:
     return len(body)
 
 
+def _is_day(day) -> bool:
+    try:
+        return date.fromisoformat(day).isoformat() == day  # "2026-W45-1" and "20261109" are dates too, but not our keys
+    except (TypeError, ValueError):
+        return False
+
+
 def _spans(data) -> dict[str, list[list[int]]]:
     """The usable days of the site's stretches: [start, end) minutes of the day, in order. A bad day is left out."""
     out = {}
     for day, spans in data.items() if isinstance(data, dict) else ():
-        try:
-            if date.fromisoformat(day).isoformat() != day:  # "2026-W45-1" and "20261109" are dates too, but not our keys
-                continue
-        except (TypeError, ValueError):
-            continue
-        if not isinstance(spans, list) or not 0 < len(spans) <= MAX_SPANS:
+        if not _is_day(day) or not isinstance(spans, list) or not 0 < len(spans) <= MAX_SPANS:
             continue
         last = 0
         for span in spans:
@@ -314,17 +318,8 @@ def _spans(data) -> dict[str, list[list[int]]]:
     return dict(sorted(out.items()))
 
 
-def pull_site(url: str, netrc_path: Path | None = None) -> tuple[dict[str, int], dict[str, list[list[int]]]]:
-    """The site clock from its backup: minutes per day, and the stretches it counted (none from an older site)."""
-    body = request(url, "/api/backup", netrc_path, what="pull")
-    try:
-        backup = json.loads(body)
-    except (json.JSONDecodeError, TypeError, RecursionError, UnicodeDecodeError):
-        raise ValueError("pull failed: unexpected backup shape") from None
-    if backup is None:
-        return {}, {}
-    if not isinstance(backup, dict):
-        raise ValueError("pull failed: unexpected backup shape")
+def _own_clock(backup: dict) -> tuple[dict[str, float], dict[str, list[list[int]]]]:
+    """The saver's own log: milliseconds by day, and its stretches. A malformed log is an error, as it always was."""
     if "study.time" not in backup:
         return {}, {}
     raw = backup["study.time"]
@@ -336,7 +331,7 @@ def pull_site(url: str, netrc_path: Path | None = None) -> tuple[dict[str, int],
         raise ValueError("pull failed: unexpected backup shape") from None
     if not isinstance(study, dict):
         raise ValueError("pull failed: unexpected backup shape")
-    days: dict[str, int] = {}
+    time: dict[str, float] = {}
     for day, subjects in study.items():
         if not isinstance(subjects, dict):
             raise ValueError("pull failed: unexpected backup shape")
@@ -346,14 +341,72 @@ def pull_site(url: str, netrc_path: Path | None = None) -> tuple[dict[str, int],
                     or not math.isfinite(ms) or ms < 0):
                 raise ValueError("pull failed: unexpected backup shape")
             total += ms
-        minutes = int(total // 60_000)
-        if minutes:
-            days[day] = minutes
+        if _is_day(day):
+            time[day] = min(total, DAY_MS)
     try:  # stretches are optional: whatever is wrong with them, the minutes still count
         spans = _spans(json.loads(backup.get("study.spans")))
     except (ValueError, TypeError, RecursionError):  # ValueError: bad JSON, or a number too long to read
         spans = {}
-    return dict(sorted(days.items())[-400:]), spans
+    return time, spans
+
+
+def _other_clocks(backup: dict) -> list[tuple[dict[str, float], dict[str, list[list[int]]]]]:
+    """The other browsers' clocks, which a newer site lists under `study.devices`. A bad entry or day costs only itself."""
+    try:
+        data = json.loads(backup.get("study.devices"))
+    except (ValueError, TypeError, RecursionError):
+        return []
+    saver = backup.get("study.saver")
+    clocks = []
+    for name, entry in list(data.items())[:MAX_DEVICES] if isinstance(data, dict) else ():
+        time = entry.get("time") if isinstance(entry, dict) else None
+        if name == saver or not isinstance(time, dict):
+            continue  # the saver's own log is the fresh copy of its clock; the list may hold a stale one
+        good = {day: min(ms, DAY_MS) for day, ms in list(time.items())[:1000]
+                if _is_day(day) and not isinstance(ms, bool) and isinstance(ms, (int, float))
+                and math.isfinite(ms) and ms >= 0}
+        clocks.append((good, _spans(entry.get("spans"))))
+    return clocks
+
+
+def _site(clocks: list[tuple[dict[str, float], dict[str, list[list[int]]]]]
+          ) -> tuple[dict[str, int], dict[str, list[list[int]]]]:
+    """Minutes per day and stretches from every browser's clock. One clock is exactly itself.
+
+    With several, a day is their minutes added up, held to the time their stretches cover together: minutes two
+    browsers both counted (both open at once, or one restored from the other's copy) count once. A day some browser
+    has no stretches for can't be checked that way, so it is the larger clock. A day is never under any one clock.
+    """
+    minutes, spans = {}, {}
+    for day in sorted({day for time, stretches in clocks for day in (*time, *stretches)}):
+        counted = [(time.get(day, 0), stretches.get(day)) for time, stretches in clocks]
+        union = _merged([list(span) for _, stretch in counted for span in stretch or ()])
+        if 0 < len(union) <= MAX_SPANS:
+            spans[day] = union
+        total = top = max(ms for ms, _ in counted)
+        if len(clocks) > 1 and all(stretch for ms, stretch in counted if ms >= 60_000):
+            total = max(top, min(sum(ms for ms, _ in counted), 60_000 * sum(b - a for a, b in union)))
+        if total >= 60_000:
+            minutes[day] = int(total // 60_000)
+    return dict(sorted(minutes.items())[-400:]), spans
+
+
+def pull_site(url: str, netrc_path: Path | None = None) -> tuple[dict[str, int], dict[str, list[list[int]]]]:
+    """The site clock from its backup: minutes per day, and the stretches it counted (none from an older site).
+
+    The backup holds the log of whichever browser saved last; a newer site lists the other browsers beside it, and
+    their clocks are added (`_site`).
+    """
+    body = request(url, "/api/backup", netrc_path, what="pull")
+    try:
+        backup = json.loads(body)
+    except (json.JSONDecodeError, TypeError, RecursionError, UnicodeDecodeError):
+        raise ValueError("pull failed: unexpected backup shape") from None
+    if backup is None:
+        return {}, {}
+    if not isinstance(backup, dict):
+        raise ValueError("pull failed: unexpected backup shape")
+    return _site([_own_clock(backup), *_other_clocks(backup)])
 
 
 def fetch_inbox(url: str, netrc_path: Path | None = None) -> list:
@@ -370,7 +423,12 @@ def fetch_inbox(url: str, netrc_path: Path | None = None) -> list:
 
 
 def save_notes(conn, minutes: dict[str, int]) -> None:
-    set_setting(conn, "notes_time", json.dumps(minutes, sort_keys=True))
+    """Keep the larger number for each day, and days the site no longer sends: a clock only ever counts up, while
+    the backup can come from another browser (an older site) or carry a browser's entry put back stale."""
+    kept = notes_minutes(conn)
+    for day, n in minutes.items():
+        kept[day] = max(n, kept.get(day, 0))
+    set_setting(conn, "notes_time", json.dumps(dict(sorted(kept.items())[-400:]), sort_keys=True))
 
 
 def notes_minutes(conn) -> dict[str, int]:
