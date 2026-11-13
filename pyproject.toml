@@ -1,11 +1,12 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "prod-max"
 version = "0.17.0"
 description = "Local planner that learns your estimate bias and simulates deadline risk"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = ["fsrs>=6.3,<7"]
 

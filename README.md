@@ -14,10 +14,11 @@ Everything is stored in one SQLite file, `~/.local/share/prod-max/pm.db`, create
 ## Install
 
 ```
-uv tool install --editable .      # puts `pm` on your PATH
+uv tool install git+https://github.com/Krishnasai2008/prod-max    # puts `pm` on your PATH
+uv tool install --editable .      # or this, inside a clone, to change the code
 ```
 
-It needs Linux with systemd or macOS, Python 3.12 or newer and [uv](https://docs.astral.sh/uv/). Windows is not supported; WSL works like Linux, except that opening files and desktop nudges don't. On a new machine, clone the repo first and run that line inside it. The notes site that goes with `pm` is in `notes-site/`; its [README](notes-site/README.md) says how to put your own copy online.
+It needs Linux with systemd or macOS, Python 3.12 or newer and [uv](https://docs.astral.sh/uv/). Windows is not supported; WSL works like Linux, except that opening files and desktop nudges don't. Clone the repo if you want the notes site too. The notes site that goes with `pm` is in `notes-site/`; its [README](notes-site/README.md) says how to put your own copy online.
 
 Without installing, run `uv run pm <cmd>` from this folder. The `--install` commands (`pm watch --install`, `pm ui --install`) need the installed `pm`, because the service has to find it.
 
