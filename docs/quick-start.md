@@ -46,7 +46,7 @@ started #1 Maths problem set 3
 first step: read question 1
 
 $ pm stop "q1-2 done, next: q3"
-stopped #1 after 50m
+stopped #1 after 1h50m
 
 $ pm done 1
 done #1: 1h50m logged, estimated 2h
@@ -55,24 +55,30 @@ done #1: 1h50m logged, estimated 2h
 - `start` and `stop` can repeat over several days; the time adds up. The note you give `stop` is shown
   the next time you start.
 - `done` is what teaches `pm`: it compares the logged time with your estimate.
-- Forgot the timer? `pm stop --as 45m` records 45 minutes, and `pm log 1 1h` adds time afterwards.
+- Left the timer running? `pm stop --as 45m` stops it and records 45 minutes instead. Worked without
+  a timer? `pm log 1 1h` adds the time afterwards.
 - Gave up on a task? `pm drop 1`. Marked the wrong one? `pm reopen 1`.
 
 ## 5. Ask pm what to do
 
+Task 1 is finished, so add the next one first:
+
 ```
+$ pm add "Physics lab report" --est 2h --due +7 --course physics --kind lab
+added #2
+
 $ pm today
 Deep work (peak 09-12):
-  #1 Maths problem set 3  ~3h  first step: read question 1
+  #2 Physics lab report  ~2h21m
 
 $ pm risk
-#2  Physics lab report  due 2026-11-20  late 0%  start by 2026-11-18
-crunch risk 0%  start the queue by 2026-11-18
+#2  Physics lab report  due 2026-11-20  late 0%  start by 2026-11-19
+crunch risk 0%  start the queue by 2026-11-19
 ```
 
-- `pm today` (or just `pm`) fills today's hours, earliest deadline first. The `~3h` is your 2h estimate
-  corrected for how long things really take you (`pm` assumes 1.5 times longer until it has learned
-  your own number; see it with `pm bias`).
+- `pm today` (or just `pm`) fills today's hours, earliest deadline first. The `~2h21m` is your 2h
+  estimate corrected for how long things really take you: `pm` assumes 1.5 times longer at first and
+  moves toward your own number with every task you finish (see it with `pm bias`).
 - `pm risk` gives the chance each task is late and the last safe day to start. **crunch risk** is the
   chance that any deadline slips; above about 20%, start earlier or cut something.
 
@@ -89,7 +95,9 @@ $ pm review
 ```
 
 - A **topic** is a chapter with an exam date. An **item** is a flashcard that points at a section of
-  your notes file; `--all` makes one per section.
+  your notes file; `--all` makes one per section. A section counts when its heading has no
+  subheadings and at least three non-blank lines under it, so `nothing to add` means no section is
+  that long yet.
 - `pm review` shows each due item: say how confident you are (0–100), read the answer, then grade
   yourself `1` forgot, `2` hard, `3` good, `4` easy. `pm` picks the next date from the grade.
 - `pm study next` says which topic to study when you have free time.
