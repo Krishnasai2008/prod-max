@@ -149,3 +149,9 @@ test("the overall score is shown with the penalty days behind it", () => {
   const old = { ...BOARD, score: undefined, penalties: undefined };
   assert.ok(!html(STATE, on(old)).includes("Score"));
 });
+
+test("each player's study streak is shown when the board has it", () => {
+  const out = html(STATE, on({ ...BOARD, streaks: day(4, 0) }));
+  assert.ok(out.includes('<p class="study-hint">2h+ days in a row: you 4 · sam 0.</p>'));
+  assert.ok(!html(STATE, on(BOARD)).includes("days in a row:"));  // a board from before the key
+});

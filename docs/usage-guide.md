@@ -1281,8 +1281,8 @@ terminal.
 
 Every 10 seconds the daemon indexes up to 20 new or changed files (a file is picked up after it has been
 unchanged for 10s, so half-finished downloads are skipped). Every 5 minutes, with `notes_url` set, it
-applies what you sent from the [site's Planner box](#sending-things-from-the-phone). Once an hour it
-sends [nudges](#nudges), reads the site's study clock, syncs the
+applies what you sent from the [site's Planner box](#sending-things-from-the-phone) and reads the site's
+study clock. Once an hour it sends [nudges](#nudges), syncs the
 [scoreboard](#versus-studying-against-friends) and pushes [stats](#the-notes-site).
 
 What's readable: PDFs (scanned ones get OCR on their first 10 pages), images (OCR), docx/pptx/odt/odp,
@@ -1330,8 +1330,17 @@ due, and which phone entries were applied. With `notes_url` set, `--push` sends 
 `notes_url/api/pm` over HTTPS, and the daemon does this hourly.
 
 The app's **Stats** screen (or `6`) shows the same sections locally, without pushing anything. Its
-heatmap also counts the time the site's study clock recorded: once an hour the daemon reads that clock
-from the site, and a day shows the larger of the two clocks, never their sum.
+heatmap and streak also count the time the site's study clock recorded: every 5 minutes the daemon reads
+that clock from the site, so reading there shows up here a few minutes later. A day is the timer plus the
+site clock, with the time both ran counted once: an hour of reading on the site while a timer runs is one
+hour, and an hour of each at different times is two. The site records when its clock counted for this; a
+day from before it did (or from an older copy of the site) shows the larger of the two clocks instead.
+Time added with `pm log` (or sent from the phone) has no clock time of its own, so it never adds on top of
+the site clock: if you read on the site for an hour and then log that hour to a task, the day gains one
+hour, not two. The price is that an hour logged for work away from the screen, on a day you also read on
+the site, may not add either; use the timer when you want both counted. A timer session that runs past
+midnight is split at midnight here. A day is never less than its LearnHarness tutor minutes.
+The site's own stats page and home page streak use the same number once the daemon has pushed it.
 
 ### The Planner box
 
@@ -1437,7 +1446,7 @@ hour, so `--sync` is only for when you want it now.
 
 | Category | What it counts, per day |
 |---|---|
-| minutes studied | time on the timer (`pm start` / `pm stop`) and time logged with `pm log`; a session counts on the day it started |
+| minutes studied | the same number as the Stats heatmap: time on the timer (`pm start` / `pm stop`), time logged with `pm log`, and time on the notes site's study clock, with time the timer and the site clock both ran counted once; logged time never adds on top of site time; never less than the day's LearnHarness tutor minutes; a session past midnight is split at midnight |
 | reviews done | review grades, right or wrong |
 | quiz answers right | right answers that are neither reviews nor tests: practice problems, spot cards, LearnHarness quizzes and practice |
 | test answers right | right answers in mock tests (`pm mock`), on the day the test was finished |
@@ -1458,7 +1467,12 @@ Skipping a day costs you. A final day on which you studied 30 minutes or less is
 player it applies to (both of you, if neither studied). Your overall **score** goes up by one for
 each day you win and down by one for each penalty day. It never goes below zero: a penalty day at zero
 costs nothing more. Only minutes count here: reviews or quizzes done in under 30 minutes of
-timed work still leave the day a penalty day, so start the timer (`pm start`) or log the time (`pm log`).
+timed work still leave the day a penalty day, so start the timer (`pm start`), log the time (`pm log`)
+or read on the notes site with its clock counting.
+
+The board also shows each player's study streak (`2h+ days in a row:`): days in a row with 2 hours or
+more, counted back from that player's last sync. Today joins the run once it reaches 2 hours. It is
+shown, not scored.
 
 Today is always live. A day becomes **final** once every player's `pm` has synced after it ended (after
 their midnight). Only final days go into the wins, the draws and the streak. The tally starts at the

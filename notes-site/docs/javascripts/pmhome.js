@@ -155,6 +155,7 @@ async function pmHomePage() {
   const pm = res?.ok ? await res.json().catch(() => null) : null;
   if (!slot.isConnected) return;  // the reader already moved on to another page
   if (pm?.version !== 1) { slot.remove(); return; }  // no pm on this login (or an unknown format): no box at all
+  if (typeof statsRepaint === "function") statsRepaint(pm);  // today.js: the streak box counts pm's combined minutes too
   const box = foldOut(slot, "plan", true);
   box.querySelector("summary").innerHTML = planSummary(pm, new Date());
   box.insertAdjacentHTML("beforeend", `<div class="plan-body"></div>`);

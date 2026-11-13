@@ -9,7 +9,6 @@ from pathlib import Path
 
 from pm.db import get_setting, set_setting
 from pm.study import mastery, topics
-from pm.tasks import _minutes
 
 CARD_DAYS = 400  # shortcut: the tally is recomputed from the cards, so it covers 400 days; store results if a season outlives that
 CACHE = "versus_cards"  # internal: the hub's last reply, so the board works offline
@@ -18,6 +17,7 @@ CATEGORIES = (("min", "minutes studied"), ("reviews", "reviews done"), ("quiz", 
 COUNTS = {"min": 1440, "reviews": 100_000, "quiz": 100_000, "test": 100_000}  # the most a day can honestly hold
 MAX_PLAYERS, MAX_NAME, RECENT = 50, 40, 14
 PENALTY_MIN = 30  # a day with this many minutes or fewer costs the player a point of overall score
+STREAK_MIN = 120  # a day with this many minutes keeps the study streak: the notes site's 2h rule
 
 
 def syllabus(conn, now: datetime) -> float | None:
@@ -42,10 +42,9 @@ def card(conn, now: datetime) -> dict:
             cell = days.setdefault(day, {"min": 0, "reviews": 0, "quiz": 0, "test": 0})
             cell[key] = cell.get(key, 0) + n
 
-    # the same rule as stats._days: a session counts on the day it started
-    for s in conn.execute("SELECT start, end FROM sessions"):
-        start = datetime.fromisoformat(s["start"])
-        add(start.date().isoformat(), "min", _minutes(start, datetime.fromisoformat(s["end"]) if s["end"] else now))
+    from pm.stats import combined  # stats imports this module for the push
+    for day, minutes in combined(conn, now).items():  # the timer and the site's clock, overlap counted once
+        add(day, "min", minutes)
     for r in conn.execute("SELECT substr(ts, 1, 10) AS day, source, count(*) AS n, sum(correct = 1) AS right"
                           " FROM evidence_v WHERE ts IS NOT NULL GROUP BY day, source"):
         if r["source"] == "review":
@@ -89,8 +88,8 @@ def _card(data) -> dict | None:
         generated = datetime.fromisoformat(data["generated"])
     except (KeyError, TypeError, ValueError):
         return None
-    if generated.tzinfo is not None or len(data["days"]) > CARD_DAYS:
-        return None
+    if generated.tzinfo is not None or generated.year < 2000 or len(data["days"]) > CARD_DAYS:
+        return None  # a date near the start of the calendar would overflow the day arithmetic below
     days = {key: day for key, cell in data["days"].items() if (day := _day(key, cell)) is not None}
     return {"generated": generated.isoformat(timespec="seconds"), "days": dict(sorted(days.items()))}
 
@@ -141,6 +140,22 @@ def _score(cards: dict[str, dict], day: str) -> dict:
             "penalty": slack}
 
 
+def _study_streak(c: dict) -> int:
+    """Days in a row with STREAK_MIN minutes, back from the day the card was made; that day counts once it gets there."""
+    day = date.fromisoformat(c["generated"][:10])
+
+    def full(d: date) -> bool:
+        return c["days"].get(d.isoformat(), {}).get("min", 0) >= STREAK_MIN
+
+    if not full(day):
+        day -= timedelta(days=1)
+    n = 0
+    while full(day):
+        n += 1
+        day -= timedelta(days=1)
+    return n
+
+
 def board(cards: dict[str, dict], you: str | None, today: date) -> dict:
     """Today so far, and the tally over every final day. A day is final once every card was made after it ended.
 
@@ -179,7 +194,7 @@ def board(cards: dict[str, dict], you: str | None, today: date) -> dict:
                 open_streak = False
     return {"you": you, "players": list(cards), "today": _score(cards, today.isoformat()), "tally": tally,
             "draws": draws, "streak": streak, "recent": recent, "penalties": penalties,
-            "score": score,
+            "score": score, "streaks": {name: _study_streak(c) for name, c in cards.items()},
             "synced": {name: c["generated"] for name, c in cards.items()}}
 
 
@@ -227,6 +242,7 @@ def text(b: dict) -> list[str]:
     lines.append("wins: " + " · ".join(f"{who(p)} {b['tally'][p]}" for p in players) + f" · draws {b['draws']}")
     lines.append(f"days of {PENALTY_MIN}m or less: " + " · ".join(f"{who(p)} {b['penalties'][p]}" for p in players))
     lines.append("score: " + " · ".join(f"{who(p)} {b['score'][p]}" for p in players))
+    lines.append("2h+ days in a row: " + " · ".join(f"{who(p)} {b['streaks'][p]}" for p in players))
     if b["streak"]:
         n = b["streak"]["days"]
         lines.append(f"streak: {who(b['streak']['name'])}, {n} day{'' if n == 1 else 's'}")

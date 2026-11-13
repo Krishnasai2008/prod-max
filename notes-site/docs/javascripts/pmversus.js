@@ -58,6 +58,7 @@ function versusHtml(v, now) {
       html += hint(`Score: ${versusCounts(v, v.score, order)} · days of 30m or less: ${versusCounts(v, v.penalties, order)}`);
     const streak = versusObj(v.streak) ? versusLeader(v, v.streak.name) : null;
     if (streak && versusNum(v.streak.days) > 0) html += hint(`Streak: ${versusName(v, streak)} won ${days(versusNum(v.streak.days))} in a row`);
+    if (versusObj(v.streaks)) html += hint(`2h+ days in a row: ${versusCounts(v, v.streaks, order)}`);  // study streaks; older pushes have none
     const recent = Array.isArray(v.recent) ? v.recent.filter(versusObj).slice(0, 14) : [];
     if (recent.length) html += `<ul class="versus-recent">` + recent.map(d => {
       const w = versusLeader(v, d.winner);

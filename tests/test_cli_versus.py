@@ -80,6 +80,7 @@ class TestCliVersus(CliCase):
             "wins: you 1 · sam 0 · draws 1",  # the 11th is a win, the 12th a draw, so no streak line
             "days of 30m or less: you 0 · sam 1",  # sam studied 30m on the 11th
             "score: you 1 · sam 0",  # the score never goes below zero
+            "2h+ days in a row: you 1 · sam 1",  # today's 185 and 140 minutes; neither reached 2h the day before
         ]) + "\n")
         with mock.patch("pm.stats.urlopen") as urlopen:  # the board is kept: no network without --sync
             self.assertEqual(self.pm("versus", now=NOW), (0, out))

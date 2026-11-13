@@ -166,12 +166,13 @@ function bugsHtml(bugs, span) {
 }
 
 export function statsHtml(pm, notes = {}, now, lh = {}) {
-  const msOf = (date) =>
-    Math.max(
-      Number(notes?.[dayOf(date)]) || 0,
-      Number(lh?.[dayOf(date)]) || 0,
-      pmDay(pm, date)?.min ?? 0,
-    ) * 60e3;
+  // `study` is every clock with the overlap counted once, per calendar day: it wins when the day has it.
+  // Without it (an older summary) a day is the largest clock, never a sum.
+  const msOf = (date) => {
+    const day = pmDay(pm, date);
+    if (day?.study != null) return Math.max(0, Number(day.study) || 0) * 60e3;
+    return Math.max(Number(notes?.[dayOf(date)]) || 0, Number(lh?.[dayOf(date)]) || 0, day?.min ?? 0) * 60e3;
+  };
   const today = msOf(now);
   const streak = streakOf(msOf, now);
   let html =

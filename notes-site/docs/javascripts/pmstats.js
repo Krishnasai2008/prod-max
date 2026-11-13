@@ -38,8 +38,10 @@ const sorted = obj => Object.entries(obj ?? {}).filter(([, v]) => v > 0).sort((a
 const days = n => `${n} ${n === 1 ? "day" : "days"}`;
 
 function pmStatsHtml(pm, notes, now) {
-  // notes only keeps daily totals, so overlap can't be removed: a day is the larger clock, never the sum
-  const msOf = d => Math.max(sum(notes[dayOf(d)]), (pmDay(pm, d)?.min ?? 0) * 60e3);
+  // pm's `study` is every clock with the overlap counted once, so it wins over `min` (the timer alone); this browser's
+  // clock still shows through for reading since the last push. A push from an older pm has only `min`, and then a day
+  // is the larger clock, never the sum. Uses nothing new from today.js, so a cached older copy of it still works.
+  const msOf = d => Math.max(sum(notes[dayOf(d)]), (pmDay(pm, d)?.study != null ? Number(pmDay(pm, d).study) || 0 : pmDay(pm, d)?.min ?? 0) * 60e3);
   const today = msOf(now), streak = streakOf(msOf, now);
   let html = `
     <div class="study-tiles">

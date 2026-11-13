@@ -195,3 +195,15 @@ test("a summary without deadlines still renders", () => {
   assert.ok(out.includes("Crunch risk"));
   assert.ok(!/undefined|NaN/.test(out));
 });
+
+test("a day is pm's combined minutes when the summary carries them", () => {
+  const pm = { ...FIXTURE, days: { ...FIXTURE.days, [day(0)]: { ...FIXTURE.days[day(0)], min: 60, study: 180 } } };
+  const out = statsHtml(pm, { [day(0)]: 90 }, NOW);  // timer 60 + site 90, apart: the server says 150+
+  assert.match(out, /Today<\/small><b data-level="green">3h</);
+  assert.match(out, /Streak \(2h\+ a day\)<\/small><b>🔥 1 day</);
+});
+
+test("the combined minutes win over the timer's own, which sit on the day a session started", () => {
+  const pm = { ...FIXTURE, days: { ...FIXTURE.days, [day(0)]: { ...FIXTURE.days[day(0)], min: 120, study: 60 } } };
+  assert.match(statsHtml(pm, { [day(0)]: 60 }, NOW), /Today<\/small><b data-level="some">1h</);
+});

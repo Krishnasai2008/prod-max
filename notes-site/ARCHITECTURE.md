@@ -210,8 +210,8 @@ matters:
 | 2 | `search.js` | Header **Search** button + `/` and Ctrl/Cmd+K. Lazily loads `pagefind/pagefind-ui.{js,css}` into a `<dialog class="study-search">` | Pagefind output |
 | 3 | `backup.js` | Restores and pushes `localStorage` to `/api/backup` | Must run **before** anything writes `study.*` |
 | 4 | `study.js` | Done ticks, progress bars, continue-reading, reading time, Focus mode, keyboard shortcuts, practice mode. Defines globals `load`, `save`, `doneSet`, `bar` | `search.js` (anchors the Focus button next to `.study-search-btn`) |
-| 5 | `today.js` | To-do list, study clock and Pomodoro, stats and heatmap, "+ Today" button. Defines `heatCells(msOf, now)` and `streakOf(msOf, now)` | `study.js` globals |
-| 6 | `pmstats.js` | The stats page: fetches `/api/pm` and draws it next to `study.time` (a day = the larger of the two clocks, never the sum). Defines `txt`, `pct`, `mins`, `hint`, `days` | `study.js` + `today.js` globals |
+| 5 | `today.js` | To-do list, study clock and Pomodoro, stats and heatmap, "+ Today" button. Defines `heatCells(msOf, now)`, `streakOf(msOf, now)` and `statsRepaint(pm)` (called by `pmhome.js`, so the home streak box counts pm's combined minutes) | `study.js` globals |
+| 6 | `pmstats.js` | The stats page: fetches `/api/pm` and draws it next to `study.time` (a day = pm's `study` minutes, every clock with overlap counted once; from an older pm, the larger of the two clocks, never the sum). Defines `txt`, `pct`, `mins`, `hint`, `days` | `study.js` + `today.js` globals |
 | 7 | `pmhome.js` | The home page's Planner box: fetches `/api/pm` (today's plan, reviews due with links to their notes) and sends tasks and time to `/api/pm-inbox`. It ends with a plain link to the laptop's `pm ui` (`http://127.0.0.1:8321/`, hidden on touch screens); the site never fetches from it. No pm data → the box is removed. Its top-level names start with `plan` or `pmHome` | `study.js` + `today.js` + `pmstats.js` globals |
 | 8 | `pmversus.js` | The home page's Versus box, a study scoreboard against friends, right under the Planner box. It reads the optional `versus` key of the `/api/pm` object `pmhome.js` already fetched (`pmHomePage` calls `versusMount(box, pm)`), so it makes no request of its own; a missing or malformed `versus` (old pushes) draws nothing. Every name and label goes through `esc`, numbers through `Number`. Its top-level names start with `versus` | `today.js` + `pmstats.js` + `pmhome.js` globals |
 
@@ -253,6 +253,7 @@ Page type is decided in `studyPage()`. A page with `.study-continue` is the home
 | `study.focus` | `boolean` | study.js | ✔ |
 | `study.todo` | `{day:"YYYY-MM-DD", items:[{id, text, done, href?, where?}]}`. On a new day, ticked items drop and unticked ones carry over | today.js | ✔ |
 | `study.time` | `{"YYYY-MM-DD": {"<subject slug>": ms, "other": ms}}` (local dates) | today.js | ✔ |
+| `study.spans` | `{"YYYY-MM-DD": [[start, end], ...]}`: the stretches the clock counted, minutes of the local day, end not included, newest 60 days. Read by pm on the laptop (from the backup) to count time once when its own timer ran over the same minutes; `study.time` stays the total | today.js | ✔ |
 | `study.subjects` | `{"<slug>": "Display name"}` | today.js | ✔ |
 | `study.open` | `{"today": bool, "stats": bool, "plan": bool, "versus": bool}`: fold-out state | today.js, pmhome.js, pmversus.js | ✔ |
 | `study.clock` | `{mode: "auto"\|"watch"\|"pomo25"\|"pomo50", start: ms}` | today.js | ✘ live state |

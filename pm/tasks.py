@@ -178,7 +178,7 @@ def log_time(conn, task_id: int, minutes: int, now: datetime) -> None:
     task = get_task(conn, task_id, now)
     if task.done_at or task.dropped:
         raise ValueError(f"#{task_id} is already done")
-    conn.execute("INSERT INTO sessions(task_id, start, end) VALUES(?,?,?)",
+    conn.execute("INSERT INTO sessions(task_id, start, end, logged) VALUES(?,?,?,1)",
                  (task_id, _ts(now - timedelta(minutes=minutes)), _ts(now)))
     conn.commit()
 

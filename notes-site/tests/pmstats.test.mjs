@@ -40,6 +40,19 @@ test("a day is the larger of notes time and pm time, never the sum", () => {
   assert.match(pmStatsHtml(FIXTURE, { [day(0)]: { poe: 1 * H } }, NOW), /Today<\/small><b[^>]*>1h 00m</);
 });
 
+test("a day is pm's combined minutes when the push carries them", () => {
+  const pm = { ...FIXTURE, days: { ...FIXTURE.days, [day(0)]: { ...FIXTURE.days[day(0)], min: 60, study: 180 } } };
+  const html = pmStatsHtml(pm, { [day(0)]: { poe: 1.5 * H } }, NOW);  // timer 1h and site 1h30 at different times
+  assert.match(html, /Today<\/small><b[^>]*>3h 00m</);
+  assert.match(html, /Streak \(2h\+ a day\)<\/small><b>🔥 1 day</);
+});
+
+test("the combined minutes win over the timer's own; this browser's clock still shows through", () => {
+  const pm = { ...FIXTURE, days: { ...FIXTURE.days, [day(0)]: { ...FIXTURE.days[day(0)], min: 120, study: 60 } } };
+  assert.match(pmStatsHtml(pm, {}, NOW), /Today<\/small><b[^>]*>1h 00m</);
+  assert.match(pmStatsHtml(pm, { [day(0)]: { poe: 1.5 * H } }, NOW), /Today<\/small><b[^>]*>1h 30m</);  // read since the last push
+});
+
 test("titles are text, never HTML", () => {
   const html = pmStatsHtml(FIXTURE, {}, NOW);
   assert.ok(!html.includes("<img"), "raw <img must not appear");

@@ -91,6 +91,14 @@ class TestTasks(unittest.TestCase):
         self.assertEqual(open_tasks(self.c, NOW), [])
         self.assertEqual(finished_ratios(self.c), [("lab", 1.5)])
 
+    def test_logged_time_is_marked_and_timer_time_is_not(self):
+        timed, logged = add_task(self.c, "a", 60, now=NOW), add_task(self.c, "b", 60, now=NOW)
+        start(self.c, timed, NOW - timedelta(hours=1))
+        stop(self.c, NOW)
+        log_time(self.c, logged, 30, NOW)
+        self.assertEqual([tuple(r) for r in self.c.execute("SELECT task_id, logged FROM sessions ORDER BY id")],
+                         [(timed, 0), (logged, 1)])
+
     def test_log_time_and_running_counts(self):
         t = add_task(self.c, "a", 60, now=NOW)
         log_time(self.c, t, 30, NOW)

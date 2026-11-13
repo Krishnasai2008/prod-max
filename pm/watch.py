@@ -10,7 +10,7 @@ from pm.files import scan
 from pm.inbox import UNPUSHED, apply as apply_inbox
 from pm.nudge import due, send
 from pm.risk import forecast
-from pm.stats import fetch_inbox, pull_notes, push, save_notes, summary_now
+from pm.stats import fetch_inbox, pull_site, push, save_notes, save_spans, summary_now
 from pm.study import refresh_files
 
 EVERY = 10
@@ -82,6 +82,14 @@ def tick(conn, now: datetime, last_hourly: datetime | None,
                              else f"inbox failed: {message}")
             else:
                 lines.extend(found)
+            try:  # with the inbox, not hourly: reading on the site shows up in Stats within minutes
+                minutes, spans = pull_site(url, netrc_path)
+                save_notes(conn, minutes)
+                save_spans(conn, spans)
+            except ValueError as error:
+                message = str(error)
+                lines.append(message if message.startswith("pull failed:")
+                             else f"pull failed: {message}")
     if lh.data_dir(conn) is not None:
         lines.extend(_lh_sync(conn, now))
     hourly = last_hourly is None or not timedelta(0) <= now - last_hourly < HOURLY
@@ -92,13 +100,6 @@ def tick(conn, now: datetime, last_hourly: datetime | None,
         send(messages)
         if messages:
             lines.append(f"{len(messages)} nudge{'s' if len(messages) > 1 else ''}")
-        if url:
-            try:
-                save_notes(conn, pull_notes(url, netrc_path))
-            except ValueError as error:
-                message = str(error)
-                lines.append(message if message.startswith("pull failed:")
-                             else f"pull failed: {message}")
         hub = get_setting(conn, "versus_url", "")
         if hub:  # before the push, so the site gets the fresh board
             try:

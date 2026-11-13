@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS tasks(
   dropped INTEGER NOT NULL DEFAULT 0 CHECK(dropped IN (0,1)));
 CREATE TABLE IF NOT EXISTS sessions(
   id INTEGER PRIMARY KEY, task_id INTEGER NOT NULL REFERENCES tasks(id),
-  start TEXT NOT NULL, end TEXT, note TEXT, energy INTEGER CHECK(energy BETWEEN 1 AND 5));
+  start TEXT NOT NULL, end TEXT, note TEXT, energy INTEGER CHECK(energy BETWEEN 1 AND 5),
+  logged INTEGER NOT NULL DEFAULT 0 CHECK(logged IN (0,1)));
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS topics(
   id INTEGER PRIMARY KEY, course TEXT NOT NULL DEFAULT '', name TEXT NOT NULL,
@@ -159,7 +160,7 @@ def _view(conn: sqlite3.Connection, name: str, sql: str) -> None:
         conn.commit()
 
 
-VERSION = 14
+VERSION = 15
 SEEN = "watch_seen"  # internal: when the daemon last ticked (pm doctor reads it)
 
 
@@ -198,6 +199,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
     _add_column(conn, "tasks", "dropped", "INTEGER NOT NULL DEFAULT 0 CHECK(dropped IN (0,1))")
     _add_column(conn, "items", "suspended", "INTEGER NOT NULL DEFAULT 0 CHECK(suspended IN (0,1))")
     _add_column(conn, "sessions", "energy", "INTEGER CHECK(energy BETWEEN 1 AND 5)")
+    _add_column(conn, "sessions", "logged", "INTEGER NOT NULL DEFAULT 0 CHECK(logged IN (0,1))")  # 1: pm log, no real clock time
     _view(conn, "evidence_v", EVIDENCE_VIEW)
     if old < 9:  # items from before phase 11 get their files tracked, sections still unknown
         conn.execute("INSERT OR IGNORE INTO topic_files(topic_id, path)"

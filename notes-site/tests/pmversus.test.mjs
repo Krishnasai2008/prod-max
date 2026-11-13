@@ -84,3 +84,9 @@ test("the overall score and penalty days are shown when the push has them, and n
   assert.ok(!versusHtml(V(), NOW).includes("Score:"));
   assert.ok(!versusHtml({ ...v, score: "<b>" }, NOW).includes("Score:"));
 });
+
+test("each player's study streak is shown when the push has it", () => {
+  assert.ok(versusHtml({ ...V(), streaks: { kelvin: 4, sam: 0 } }, NOW).includes("2h+ days in a row: you 4 · sam 0"));
+  assert.ok(!versusHtml(V(), NOW).includes("days in a row:"));
+  assert.ok(!versusHtml({ ...V(), streaks: "<b>" }, NOW).includes("days in a row:"));
+});

@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from pm import lh
 from pm.db import connect, set_setting
-from pm.stats import notes_minutes
+from pm.stats import notes_minutes, site_spans
 from pm.watch import tick
 
 NOW = datetime(2026, 11, 9, 10, 0)
@@ -216,6 +216,28 @@ class TestTick(unittest.TestCase):
         requests = list(self.site.requests)
         self.tick(NOW + timedelta(seconds=10), last)
         self.assertEqual(self.site.requests, requests)
+
+    def test_the_study_clock_is_read_on_every_inbox_check_not_once_an_hour(self):
+        set_setting(self.c, "notes_url", "https://x.dev")
+        _, last = self.tick(NOW, None)
+        self.site.bodies["/api/backup"] = json.dumps({
+            "study.time": json.dumps({"2026-11-09": {"os": 5_400_000}}),
+            "study.spans": json.dumps({"2026-11-09": [[540, 630]]})}).encode()
+        before = len(self.site.requests)
+        self.tick(NOW + timedelta(minutes=4), last)
+        self.assertEqual(len(self.site.requests), before)
+        self.tick(NOW + timedelta(minutes=6), last)
+        self.assertEqual(self.site.requests[before:], [("GET", "/api/pm-inbox"), ("GET", "/api/backup")])
+        self.assertEqual(notes_minutes(self.c), {"2026-11-09": 90})
+        self.assertEqual(site_spans(self.c), {"2026-11-09": [[540, 630]]})
+
+    def test_the_study_clock_is_still_read_when_the_inbox_fails(self):
+        set_setting(self.c, "notes_url", "https://x.dev")
+        self.site.bodies["/api/backup"] = BACKUP
+        self.site.errors["/api/pm-inbox"] = HTTPError("https://x.dev/api/pm-inbox", 404, "Not Found", {}, None)
+        lines, _ = self.tick(NOW, None)
+        self.assertEqual(sum("inbox failed: HTTP 404" in line for line in lines), 1)
+        self.assertEqual(notes_minutes(self.c), {"2026-11-09": 90})
 
     def test_pull_failure_is_one_log_line_and_the_push_still_runs(self):
         set_setting(self.c, "notes_url", "https://x.dev")

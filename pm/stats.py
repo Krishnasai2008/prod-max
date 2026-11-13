@@ -4,7 +4,7 @@ import math
 import netrc
 import random
 import shlex
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from http.client import HTTPException
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -17,6 +17,7 @@ from pm.calibrate import Posterior, median_ratio, posteriors
 from pm.db import get_setting, set_setting
 from pm.excerpt import _LINES, _PAGE
 from pm.inbox import done as inbox_done
+from pm.lh import minutes_by_day
 from pm.notes import notes_dir, url_of
 from pm.risk import TaskRisk, cap_min, forecast
 from pm.study import calibration, get_topic, held, mastery, new_cap, queue, topics
@@ -24,7 +25,8 @@ from pm.tasks import Task, _minutes, finished_ratios, finished_tasks, worked_min
 from pm.today import plan_day
 
 MAX_REPLY = 5_000_000  # the site caps what it stores at 5 MB; more than that is not our backup
-DAY_KEYS = ("min", "deep", "peak", "reviews", "recalled", "fails", "fixes")
+DAY_KEYS = ("min", "deep", "peak", "reviews", "recalled", "fails", "fixes", "study")  # study: every clock, see combined
+SPAN_DAYS, MAX_SPANS = 400, 300  # days of site stretches pm keeps; the most stretches one day can hold
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -74,6 +76,8 @@ def _days(conn, now: datetime, peak: str) -> dict:
     for r in conn.execute("SELECT closed FROM episodes"
                           " WHERE status='fixed' AND closed IS NOT NULL"):
         cell(datetime.fromisoformat(r["closed"]).date().isoformat())["fixes"] += 1
+    for day, minutes in combined(conn, now).items():
+        cell(day)["study"] = minutes
     return dict(sorted((d, c) for d, c in days.items() if any(c.values())))
 
 
@@ -287,18 +291,42 @@ def push(data: dict, url: str, netrc_path: Path | None = None) -> int:
     return len(body)
 
 
-def pull_notes(url: str, netrc_path: Path | None = None) -> dict[str, int]:
+def _spans(data) -> dict[str, list[list[int]]]:
+    """The usable days of the site's stretches: [start, end) minutes of the day, in order. A bad day is left out."""
+    out = {}
+    for day, spans in data.items() if isinstance(data, dict) else ():
+        try:
+            if date.fromisoformat(day).isoformat() != day:  # "2026-W45-1" and "20261109" are dates too, but not our keys
+                continue
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(spans, list) or not 0 < len(spans) <= MAX_SPANS:
+            continue
+        last = 0
+        for span in spans:
+            if (not isinstance(span, list) or len(span) != 2
+                    or any(isinstance(n, bool) or not isinstance(n, int) for n in span)
+                    or not last <= span[0] < span[1] <= 1440):
+                break
+            last = span[1]
+        else:
+            out[day] = spans
+    return dict(sorted(out.items()))
+
+
+def pull_site(url: str, netrc_path: Path | None = None) -> tuple[dict[str, int], dict[str, list[list[int]]]]:
+    """The site clock from its backup: minutes per day, and the stretches it counted (none from an older site)."""
     body = request(url, "/api/backup", netrc_path, what="pull")
     try:
         backup = json.loads(body)
     except (json.JSONDecodeError, TypeError, RecursionError, UnicodeDecodeError):
         raise ValueError("pull failed: unexpected backup shape") from None
     if backup is None:
-        return {}
+        return {}, {}
     if not isinstance(backup, dict):
         raise ValueError("pull failed: unexpected backup shape")
     if "study.time" not in backup:
-        return {}
+        return {}, {}
     raw = backup["study.time"]
     if not isinstance(raw, str):
         raise ValueError("pull failed: unexpected backup shape")
@@ -321,7 +349,11 @@ def pull_notes(url: str, netrc_path: Path | None = None) -> dict[str, int]:
         minutes = int(total // 60_000)
         if minutes:
             days[day] = minutes
-    return dict(sorted(days.items())[-400:])
+    try:  # stretches are optional: whatever is wrong with them, the minutes still count
+        spans = _spans(json.loads(backup.get("study.spans")))
+    except (ValueError, TypeError, RecursionError):  # ValueError: bad JSON, or a number too long to read
+        spans = {}
+    return dict(sorted(days.items())[-400:]), spans
 
 
 def fetch_inbox(url: str, netrc_path: Path | None = None) -> list:
@@ -352,3 +384,84 @@ def notes_minutes(conn) -> dict[str, int]:
         if isinstance(minutes, bool) or not isinstance(minutes, int) or minutes < 0:
             return {}
     return data
+
+
+def save_spans(conn, spans: dict[str, list[list[int]]]) -> None:
+    """A pulled day replaces the stored one; a day the site no longer sends is kept, so old totals never change."""
+    # shortcut: one settings row, a table if this ever needs queries
+    kept = {**site_spans(conn), **spans}
+    set_setting(conn, "notes_spans", json.dumps(dict(sorted(kept.items())[-SPAN_DAYS:])))
+
+
+def site_spans(conn) -> dict[str, list[list[int]]]:
+    try:
+        return _spans(json.loads(get_setting(conn, "notes_spans", "")))
+    except (ValueError, TypeError, RecursionError):
+        return {}
+
+
+def _merged(spans: list[list[float]]) -> list[list[float]]:
+    out: list[list[float]] = []
+    for a, b in sorted(spans):
+        if out and a <= out[-1][1]:
+            out[-1][1] = max(out[-1][1], b)
+        else:
+            out.append([a, b])
+    return out
+
+
+def _shared(a: list[list[float]], b: list[list[float]]) -> float:
+    """How much two lists of intervals have in common; each list in order and not overlapping itself."""
+    i = j = 0
+    total = 0.0
+    while i < len(a) and j < len(b):
+        total += max(0.0, min(a[i][1], b[j][1]) - max(a[i][0], b[j][0]))
+        if a[i][1] < b[j][1]:
+            i += 1
+        else:
+            j += 1
+    return total
+
+
+def _pieces(start: datetime, end: datetime):
+    """A session cut at each midnight: (day, seconds from that midnight to its start, and to its end)."""
+    while start < end:
+        midnight = datetime.combine(start.date(), datetime.min.time())
+        stop = min(end, midnight + timedelta(days=1))
+        yield start.date().isoformat(), (start - midnight).total_seconds(), (stop - midnight).total_seconds()
+        start = stop
+
+
+def combined(conn, now: datetime) -> dict[str, int]:
+    """Minutes studied per calendar day with every clock counted once: pm's time plus the site's clock, less the
+    time both ran, and never under the LearnHarness minutes.
+
+    The time both ran is measured where it can be: timer sessions against the stretches the site recorded. Time
+    with no place in the day may all be shared, so it is never counted twice: `pm log` time (it is stored as the
+    minutes before the log, wherever the work was), and site time no stretch accounts for (an older site, the day
+    it began recording). With no stretches and no logged time that is the larger clock.
+    Sessions are cut at midnight here, unlike `min` in the stats shape (the timer alone, on a session's start day).
+    """
+    pm: dict[str, int] = {}
+    logged: dict[str, int] = {}
+    busy: dict[str, list[list[float]]] = {}
+    for s in conn.execute("SELECT start, end, logged FROM sessions"):
+        end = datetime.fromisoformat(s["end"]) if s["end"] else now
+        for day, a, b in _pieces(datetime.fromisoformat(s["start"]), end):
+            minutes = int((b - a) // 60)
+            pm[day] = pm.get(day, 0) + minutes
+            if s["logged"]:
+                logged[day] = logged.get(day, 0) + minutes
+            else:
+                busy.setdefault(day, []).append([a, b])
+    site, spans, tutor = notes_minutes(conn), site_spans(conn), minutes_by_day(conn)
+    out = {}
+    for day in sorted({*pm, *site, *tutor}):
+        mine, theirs, stretches = pm.get(day, 0), site.get(day, 0), spans.get(day, [])
+        shared = _shared(_merged(busy.get(day, [])), [[c * 60, d * 60] for c, d in stretches]) if stretches else 0
+        unplaced = max(0, theirs - sum(d - c for c, d in stretches)) + logged.get(day, 0)
+        both = min(mine, theirs, int(shared // 60) + unplaced)
+        total = max(mine + theirs - both, tutor.get(day, 0))
+        if total > 0:
+            out[day] = total
+    return out

@@ -4,7 +4,7 @@
 // Uses load(), save(), doneSet() and bar() from study.js, which loads first.
 
 const TODO_KEY = "study.todo", TIME_KEY = "study.time", NAMES_KEY = "study.subjects", OPEN_KEY = "study.open",
-      CLOCK_KEY = "study.clock", TICK_KEY = "study.tick", ACTIVE_KEY = "study.active";
+      CLOCK_KEY = "study.clock", TICK_KEY = "study.tick", ACTIVE_KEY = "study.active", SPANS_KEY = "study.spans";
 const LEVELS = [[6, "red"], [4, "orange"], [2, "green"]];  // hours studied in a day -> colour; 2 h+ keeps the streak
 const IDLE = 5 * 60e3;  // Auto pauses after 5 min without mouse, keys or scrolling
 const POMO = { pomo25: [25, 5], pomo50: [50, 10] };  // minutes of study, minutes of break
@@ -12,6 +12,7 @@ const MODES = [["auto", "Auto"], ["watch", "Stopwatch"], ["pomo25", "25 / 5"], [
 const NOTES = { auto: "Counts while you read notes here. Pauses after 5 min without scrolling, typing or moving the mouse.",
                 watch: "Counting everything, also study away from the site. Press Stopwatch again to go back to Auto." };
 const WEEKS = 26, H = 3600e3;
+const SPAN_DAYS = 60;  // days of stretches kept here; pm on the laptop reads them from the backup and keeps its own copy
 
 const pad = n => String(n).padStart(2, "0");
 const dayOf = (t = new Date()) => `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;  // local date
@@ -51,10 +52,35 @@ function tick() {
     // add the time since any tab last counted, so two open tabs never count twice; the cap keeps a sleeping computer out
     const add = Math.min(now - load(TICK_KEY, 0), c.mode === "auto" ? 1000 : 90e3);
     const log = load(TIME_KEY, {}), day = (log[dayOf()] ??= {}), s = here || "other";
-    if (add > 0) { day[s] = (day[s] || 0) + add; save(TIME_KEY, log); }
+    if (add > 0) { day[s] = (day[s] || 0) + add; save(TIME_KEY, log); spanSave(now); }
   }
   if (counting || c.mode !== "auto") save(TICK_KEY, now);
   paintClock(c, now, counting);
+}
+
+// The stretches the clock counted: { "2026-11-09": [[600, 645], ...] }, minutes of the day, end not included.
+// pm reads them to count time once when its own timer ran over the same minutes. TIME_KEY stays the real total.
+function spanAdd(list, m) {  // minute m was counted; true when the list changed
+  const last = list.at(-1);
+  if (!Array.isArray(last) || !(last[1] >= m - 2)) { list.push([m, m + 1]); return true; }  // two idle minutes are bridged: a slow background tab
+  if (m + 1 <= last[1]) return false;  // this minute is already in, or the clock was set back
+  last[1] = m + 1;
+  return true;
+}
+
+let spanLast = "";  // the day and minute this tab last looked at: the list is read once a minute, not every second
+function spanSave(now) {
+  const t = new Date(now), day = dayOf(t), m = t.getHours() * 60 + t.getMinutes();
+  if (spanLast === `${day} ${m}`) return;
+  spanLast = `${day} ${m}`;
+  try {
+    let spans = load(SPANS_KEY, {});
+    if (!spans || typeof spans !== "object" || Array.isArray(spans)) spans = {};
+    if (!Array.isArray(spans[day])) spans[day] = [];
+    if (!spanAdd(spans[day], m)) return;
+    for (const old of Object.keys(spans).sort().slice(0, -SPAN_DAYS)) delete spans[old];
+    save(SPANS_KEY, spans);
+  } catch { /* the clock itself must keep ticking: TIME_KEY already has the time */ }
 }
 
 function setMode(mode) {
@@ -327,19 +353,44 @@ function weekOf(log, start) {  // per-subject totals for the 7 days from start
   return out;
 }
 
-function statsBox(slot) {
-  const box = foldOut(slot, "stats", false), log = load(TIME_KEY, {}), names = load(NAMES_KEY, {});
-  const now = new Date(), today = sum(log[dayOf()]), thisWeek = weekOf(log, monday(now)), streak = streakOf(d => sum(log[dayOf(d)]), now);
-  box.querySelector("summary").innerHTML = `Study stats <small>🔥 ${streak}-day streak · ${fmt(sum(thisWeek))} this week</small>`;
+// A day's study time: this browser's clock, or pm's combined minutes for the day when its summary is here and larger.
+// pm's number already holds this clock, with the time its own timer ran over the same minutes counted once.
+const studyMs = (log, pm, d) => Math.max(sum(log[dayOf(d)]), (Number(pm?.days?.[dayOf(d)]?.study) || 0) * 60e3);
 
-  const cells = heatCells(d => sum(log[dayOf(d)]), now);
-  const weeks = [...Array(8)].map((_, k) => { const s = shift(monday(now), -7 * k); return [s, sum(weekOf(log, s))]; });
+let statsPm = null;  // the /api/pm summary, once pmhome.js has fetched it
+function statsRepaint(pm) {  // called by pmHomePage; whatever goes wrong here, the Planner box must still draw
+  try {
+    statsPm = pm;
+    const box = document.querySelector(".md-content details.study-stats");
+    if (box) statsPaint(box);
+  } catch { /* the box keeps what it showed */ }
+}
+
+function statsBox(slot) {
+  const box = foldOut(slot, "stats", false);
+  statsPaint(box);
+  box.addEventListener("toggle", () => {  // newest weeks in view on small screens
+    const heat = box.querySelector(".study-heat-wrap");
+    if (heat) heat.scrollLeft = heat.scrollWidth;
+  });
+  if (location.hash === "#study-stats") { box.open = true; box.scrollIntoView(); }
+}
+
+function statsPaint(box) {
+  const log = load(TIME_KEY, {}), names = load(NAMES_KEY, {}), now = new Date();
+  const msOf = d => studyMs(log, statsPm, d), weekMs = start => [...Array(7)].reduce((a, _, i) => a + msOf(shift(start, i)), 0);
+  const today = msOf(now), week = weekMs(monday(now)), thisWeek = weekOf(log, monday(now)), streak = streakOf(msOf, now);
+  box.querySelector("summary").innerHTML = `Study stats <small>🔥 ${streak}-day streak · ${fmt(week)} this week</small>`;
+
+  const cells = heatCells(msOf, now);
+  const weeks = [...Array(8)].map((_, k) => { const s = shift(monday(now), -7 * k); return [s, weekMs(s)]; });
   const top = Math.max(...weeks.map(w => w[1]), 1), subjects = Object.entries(thisWeek).filter(([, ms]) => ms >= 60e3).sort((a, b) => b[1] - a[1]);
   const row = (label, ms, max) => `<div class="study-row"><span>${esc(label)}</span>${bar(ms, max)}<b>${fmt(ms)}</b></div>`;
+  [...box.children].slice(1).forEach(el => el.remove());  // a repaint: everything but the summary
   box.insertAdjacentHTML("beforeend", `
     <div class="study-tiles">
       <div><small>Today</small><b data-level="${level(today)}">${fmt(today)}</b></div>
-      <div><small>This week</small><b>${fmt(sum(thisWeek))}</b></div>
+      <div><small>This week</small><b>${fmt(week)}</b></div>
       <div><small>Streak (2h+ a day)</small><b>🔥 ${streak} ${streak === 1 ? "day" : "days"}</b></div>
     </div>
     <div class="study-heat-wrap"><div class="study-heat">${cells}</div></div>
@@ -349,9 +400,6 @@ function statsBox(slot) {
     <p class="study-label">This week by subject</p>
     ${subjects.map(([s, ms]) => row(names[s] ?? (s === "other" ? "Other (timer)" : s), ms, subjects[0][1])).join("") || "<p class='study-hint'>Nothing yet this week.</p>"}
     <p class="study-hint"><a href="/stats/">All stats →</a></p>`);
-  const heat = box.querySelector(".study-heat-wrap");
-  box.addEventListener("toggle", () => heat.scrollLeft = heat.scrollWidth);  // newest weeks in view on small screens
-  if (location.hash === "#study-stats") { box.open = true; box.scrollIntoView(); }
 }
 
 // ---------- Page hook ----------

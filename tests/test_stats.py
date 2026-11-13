@@ -12,8 +12,8 @@ from pm.bugs import record_run
 from pm.db import connect, set_setting
 from pm.inbox import apply as apply_inbox
 from pm.risk import TaskRisk
-from pm.stats import (build, fetch_inbox, notes_minutes, pull_notes, push, request,
-                      save_notes)
+from pm.stats import (build, combined, fetch_inbox, notes_minutes, pull_site, push, request,
+                      save_notes, save_spans, site_spans)
 from pm.study import add_item, add_topic, record_review
 from pm.tasks import add_task, done, log_time, open_tasks, start, stop
 
@@ -61,7 +61,7 @@ class TestStats(unittest.TestCase):
         data = build(self.c, NOW, [], [], 0.0)
         self.assertEqual(data["days"]["2026-11-08"],
                          {"min": 120, "deep": 90, "peak": 90, "reviews": 0, "recalled": 0,
-                          "fails": 0, "fixes": 0})
+                          "fails": 0, "fixes": 0, "study": 120})
 
     def test_peak_window_overlap(self):
         t = add_task(self.c, "deep", 60, now=NOW)
@@ -271,7 +271,7 @@ class TestPullNotes(unittest.TestCase):
         response = mock.MagicMock()
         response.__enter__.return_value.read.return_value = body
         with mock.patch("pm.stats.urlopen", return_value=response) as opener:
-            result = pull_notes(url, self.netrc)
+            result = pull_site(url, self.netrc)[0]
         return result, opener
 
     def test_sums_subjects_and_drops_days_under_a_minute(self):
@@ -323,17 +323,17 @@ class TestPullNotes(unittest.TestCase):
         error = HTTPError("https://x.dev/api/backup", 401, "Unauthorized", {}, None)
         with mock.patch("pm.stats.urlopen", side_effect=error):
             with self.assertRaisesRegex(ValueError, r"pull failed: HTTP 401 \(check ~/.netrc\)"):
-                pull_notes("https://x.dev", self.netrc)
+                pull_site("https://x.dev", self.netrc)
 
     def test_network_error_uses_the_pull_prefix(self):
         with mock.patch("pm.stats.urlopen", side_effect=URLError("offline")):
             with self.assertRaisesRegex(ValueError, "pull failed: offline"):
-                pull_notes("https://x.dev", self.netrc)
+                pull_site("https://x.dev", self.netrc)
 
     def test_a_plain_http_url_is_refused_before_the_network(self):
         with mock.patch("pm.stats.urlopen") as opener:
             with self.assertRaisesRegex(ValueError, "notes_url must start with https://"):
-                pull_notes("http://x.dev", self.netrc)
+                pull_site("http://x.dev", self.netrc)
         opener.assert_not_called()
 
 
@@ -396,3 +396,172 @@ class TestNotesMinutes(unittest.TestCase):
             with self.subTest(value=value):
                 set_setting(self.c, "notes_time", value)
                 self.assertEqual(notes_minutes(self.c), {})
+
+
+class TestPullSite(unittest.TestCase):
+    def setUp(self):
+        self.d = tempfile.TemporaryDirectory()
+        self.addCleanup(self.d.cleanup)
+        self.netrc = Path(self.d.name) / "netrc"
+        self.netrc.write_text("machine x.dev login u password p\n")
+        os.chmod(self.netrc, 0o600)
+
+    def pull(self, spans):
+        backup = {"study.time": json.dumps({"2026-11-09": {"os": 3_600_000}})}
+        if spans is not None:
+            backup["study.spans"] = spans
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps(backup).encode()
+        with mock.patch("pm.stats.urlopen", return_value=response) as opener:
+            result = pull_site("https://x.dev", self.netrc)
+        self.assertEqual(opener.call_count, 1)  # one request for both
+        return result
+
+    def test_minutes_and_stretches_come_from_one_reply(self):
+        spans = json.dumps({"2026-11-09": [[540, 600], [610, 615]], "2026-11-08": [[0, 1440]]})
+        self.assertEqual(self.pull(spans), ({"2026-11-09": 60},
+                                            {"2026-11-08": [[0, 1440]], "2026-11-09": [[540, 600], [610, 615]]}))
+
+    def test_no_stretches_is_an_old_site(self):
+        self.assertEqual(self.pull(None), ({"2026-11-09": 60}, {}))
+
+    def test_bad_stretches_never_fail_the_pull(self):
+        for spans in (5, ["x"], "not json", "[]", '"x"', json.dumps({"2026-11-09": "x"})):
+            with self.subTest(spans=spans):
+                self.assertEqual(self.pull(spans), ({"2026-11-09": 60}, {}))
+
+    def test_a_number_too_long_to_read_or_a_week_date_is_not_a_stretch(self):
+        self.assertEqual(self.pull('{"2026-11-09": [[0, ' + "9" * 5000 + "]]}"), ({"2026-11-09": 60}, {}))
+        self.assertEqual(self.pull(json.dumps({"2026-W45-1": [[0, 5]], "20261109": [[0, 5]]})), ({"2026-11-09": 60}, {}))
+
+    def test_a_bad_day_is_dropped_and_the_rest_kept(self):
+        good = [[540, 600]]
+        for bad in ([[600, 540]], [[5, 5]], [[-1, 10]], [[10, 1441]], [[1.5, 3]], [[True, 3]], [[1, 2, 3]],
+                    [[100, 200], [150, 300]], [[i, i + 1] for i in range(0, 602, 2)], "x", [5]):
+            with self.subTest(bad=bad):
+                spans = json.dumps({"2026-11-09": good, "2026-11-08": bad, "nonsense": good})
+                self.assertEqual(self.pull(spans)[1], {"2026-11-09": good})
+
+
+class TestSiteClock(unittest.TestCase):
+    def setUp(self):
+        self.c = connect(":memory:")
+        self.addCleanup(self.c.close)
+        self.day = "2026-11-09"
+
+    def work(self, begin: tuple[int, int], end: tuple[int, int] | None):
+        task = add_task(self.c, "read", 600, now=NOW)
+        start(self.c, task, datetime(2026, 11, 9, *begin))
+        if end:
+            stop(self.c, datetime(2026, 11, 9, *end))
+
+    def site(self, minutes: int, spans=None):
+        save_notes(self.c, {self.day: minutes})
+        if spans is not None:
+            save_spans(self.c, {self.day: spans})
+
+    def test_nothing_is_empty(self):
+        self.assertEqual(combined(self.c, NOW), {})
+
+    def test_one_clock_alone(self):
+        self.work((10, 0), (11, 0))
+        self.assertEqual(combined(self.c, NOW), {self.day: 60})
+        self.c.execute("DELETE FROM sessions")
+        self.site(45, [[540, 585]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 45})
+
+    def test_without_stretches_a_day_is_the_larger_clock(self):
+        self.work((10, 0), (11, 0))
+        self.site(90)
+        self.assertEqual(combined(self.c, NOW), {self.day: 90})
+
+    def test_time_apart_adds_up(self):
+        self.work((10, 0), (11, 0))
+        self.site(60, [[540, 600]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 120})
+
+    def test_time_together_counts_once(self):
+        self.work((10, 0), (11, 0))
+        self.site(60, [[600, 660]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 60})
+
+    def test_a_partial_overlap_counts_the_rest(self):
+        self.work((10, 0), (11, 0))
+        self.site(60, [[630, 690]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 90})
+
+    def test_logged_time_over_a_session_never_takes_more_than_either_clock(self):
+        self.work((10, 0), (11, 0))
+        log_time(self.c, add_task(self.c, "more", 600, now=NOW), 180, NOW)  # 10:00-13:00, over the session
+        self.site(30, [[600, 780]])  # stretches say 3h, the site's total says 30m
+        self.assertEqual(combined(self.c, NOW), {self.day: 240})  # pm 240 + site 30 - overlap 30
+
+    def test_site_time_the_stretches_do_not_cover_is_never_counted_twice(self):
+        # the day the site starts recording: 3h on its clock, stretches for the last hour only
+        self.work((8, 0), (9, 0))
+        self.site(180, [[600, 660]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 180})  # the timer hour may sit inside the unrecorded 2h
+        self.work((10, 0), (10, 30))
+        self.assertEqual(combined(self.c, NOW), {self.day: 180})  # 90m of timer, at most 120 + 30 of it shared
+
+    def test_a_session_past_midnight_meets_the_next_days_stretches(self):
+        task = add_task(self.c, "late", 600, now=NOW)
+        start(self.c, task, datetime(2026, 11, 8, 23, 0))
+        stop(self.c, datetime(2026, 11, 9, 1, 0))
+        self.assertEqual(combined(self.c, NOW), {"2026-11-08": 60, "2026-11-09": 60})  # cut at midnight
+        save_notes(self.c, {"2026-11-08": 60, "2026-11-09": 60})  # the site clock ran over the same two hours
+        save_spans(self.c, {"2026-11-08": [[1380, 1440]], "2026-11-09": [[0, 60]]})
+        self.assertEqual(combined(self.c, NOW), {"2026-11-08": 60, "2026-11-09": 60})
+        days = build(self.c, NOW, [], [], 0.0)["days"]
+        self.assertEqual((days["2026-11-08"]["min"], days["2026-11-08"]["study"]), (120, 60))  # min: the timer, on its start day
+
+    def test_logged_time_has_no_place_in_the_day_so_it_never_adds_to_site_time(self):
+        self.site(60, [[540, 600]])  # read on the site 9:00-10:00
+        log_time(self.c, add_task(self.c, "that reading", 600, now=NOW), 60, NOW)  # logged for the task at 13:00
+        self.assertEqual(combined(self.c, NOW), {self.day: 60})
+        self.work((10, 0), (11, 0))  # a timed hour apart from both still adds
+        self.assertEqual(combined(self.c, NOW), {self.day: 120})
+
+    def test_logged_time_alone_counts_in_full(self):
+        log_time(self.c, add_task(self.c, "textbook", 600, now=NOW), 90, NOW)
+        self.assertEqual(combined(self.c, NOW), {self.day: 90})
+
+    def test_an_open_session_counts_up_to_now(self):
+        self.work((12, 0), None)
+        self.site(60, [[720, 780]])
+        self.assertEqual(combined(self.c, NOW), {self.day: 60})
+
+    def test_a_larger_learnharness_day_wins(self):
+        self.work((10, 0), (11, 0))
+        self.site(60, [[540, 600]])
+        self.c.execute("INSERT INTO lh_days(chat_id, day, minutes) VALUES('chat_a', ?, 200)", (self.day,))
+        self.assertEqual(combined(self.c, NOW), {self.day: 200})
+
+    def test_stored_stretches_survive_a_pull_without_their_day(self):
+        save_spans(self.c, {"2026-11-08": [[1, 2]], self.day: [[3, 4]]})
+        save_spans(self.c, {self.day: [[5, 6]]})
+        self.assertEqual(site_spans(self.c), {"2026-11-08": [[1, 2]], self.day: [[5, 6]]})
+
+    def test_only_the_newest_400_days_of_stretches_are_kept(self):
+        first = date(2025, 1, 1)
+        save_spans(self.c, {(first + timedelta(days=i)).isoformat(): [[0, 1]] for i in range(401)})
+        kept = site_spans(self.c)
+        self.assertEqual(len(kept), 400)
+        self.assertNotIn("2025-01-01", kept)
+
+    def test_bad_stored_stretches_are_no_stretches(self):
+        self.work((10, 0), (11, 0))
+        save_notes(self.c, {self.day: 90})
+        for value in ("garbage", "[]", '{"2026-11-09": [[5, 1]]}'):
+            with self.subTest(value=value):
+                set_setting(self.c, "notes_spans", value)
+                self.assertEqual(site_spans(self.c), {})
+                self.assertEqual(combined(self.c, NOW), {self.day: 90})
+
+    def test_build_carries_the_combined_minutes(self):
+        self.work((10, 0), (11, 0))
+        self.site(60, [[540, 600]])
+        save_notes(self.c, {self.day: 60, "2026-11-07": 30})
+        days = build(self.c, NOW, [], [], 0.0)["days"]
+        self.assertEqual((days[self.day]["min"], days[self.day]["study"]), (60, 120))
+        self.assertEqual((days["2026-11-07"]["min"], days["2026-11-07"]["study"]), (0, 30))

@@ -63,6 +63,10 @@ function boardHtml(board, now) {
   if (board.streak) {
     out += `<p>Streak: ${who(board.streak.name)}, ${esc(days(num(board.streak.days)))} in a row.</p>`;
   }
+  if (board.streaks) {
+    const runs = players.map((p) => `${who(p)} ${esc(num(board.streaks[p]))}`).join(" · ");
+    out += `<p class="study-hint">2h+ days in a row: ${runs}.</p>`;
+  }
   if (board.recent.length) {
     out +=
       `<h2>Recent days</h2><ul class="versus-recent">` +

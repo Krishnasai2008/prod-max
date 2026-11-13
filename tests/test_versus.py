@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 
 from pm import evidence
 from pm.db import connect, get_setting
+from pm.stats import save_notes
 from pm.tasks import add_task, log_time
 from pm.versus import CACHE, board, cached, card, parse
 
@@ -37,6 +38,16 @@ class TestCard(unittest.TestCase):
         days = card(self.c, NOW)["days"]
         self.assertEqual(days["2026-11-13"], d(min=45, quiz=1))
         self.assertEqual(days["2026-11-12"], d(test=1))
+
+    def test_minutes_count_the_site_clock_too(self):
+        save_notes(self.c, {"2026-11-13": 90})
+        task = add_task(self.c, "read", 60, now=NOW)
+        log_time(self.c, task, 45, NOW)  # no stretches for the day: the larger clock
+        self.assertEqual(card(self.c, NOW)["days"]["2026-11-13"], d(min=90))
+
+    def test_minutes_are_never_under_the_tutor_sessions_of_the_day(self):
+        self.c.execute("INSERT INTO lh_days(chat_id, day, minutes) VALUES('chat_a', '2026-11-13', 75)")
+        self.assertEqual(card(self.c, NOW)["days"]["2026-11-13"], d(min=75))
 
     def test_the_card_holds_only_numbers(self):
         task = add_task(self.c, "secret title", 60, now=NOW, course="secret course")
@@ -97,6 +108,12 @@ class TestParse(unittest.TestCase):
                                           "days": {"yesterday": d(min=5), "20261112": d(min=5)}}}})
         self.assertEqual(cards, {"a": {"generated": "2026-11-13T09:00:00", "days": {}},
                                  "b": {"generated": "2026-11-13T09:00:00", "days": {}}})
+
+    def test_a_card_dated_at_the_start_of_the_calendar_is_left_out(self):
+        old = c(generated="0001-01-01T00:00:00", _2026_11_12=d(min=500))
+        cards = parse({"cards": {"a": old, "b": c(_2026_11_12=d(min=5))}})[1]
+        self.assertEqual(list(cards), ["b"])
+        board(cards, None, TODAY)  # and nothing raises
 
     def test_unknown_keys_are_dropped(self):
         _, cards = parse({"cards": {"a": c(_2026_11_12={**d(min=5), "title": "<b>"})}})
@@ -165,6 +182,16 @@ class TestBoard(unittest.TestCase):
         cards = self.cards(a=c(_2026_11_10=d(min=9), _2026_11_11=d(min=9), _2026_11_12=d(min=1)),
                            b=c(_2026_11_10=d(min=1), _2026_11_12=d(min=9)))
         self.assertEqual(board(cards, None, TODAY)["streak"], {"name": "b", "days": 1})
+
+    def test_study_streaks_count_back_from_the_day_each_card_was_made(self):
+        full = {f"_2026_11_{n}": d(min=120) for n in (10, 11, 12)}
+        cards = self.cards(
+            a=c(**full, _2026_11_13=d(min=30)),          # today is short so far: it doesn't break the run
+            b=c(**full, _2026_11_13=d(min=120)),         # today already counts
+            e=c(generated="2026-11-12T23:00:00", **full),  # synced yesterday: counted up to yesterday
+            f=c(_2026_11_11=d(min=500), _2026_11_12=d(min=119)),
+            g=c())
+        self.assertEqual(board(cards, "a", TODAY)["streaks"], {"a": 3, "b": 4, "e": 3, "f": 0, "g": 0})
 
     def test_one_player_or_none_scores_nothing(self):
         alone = board(self.cards(a=c(_2026_11_12=d(min=9), _2026_11_13=d(min=9))), "a", TODAY)
